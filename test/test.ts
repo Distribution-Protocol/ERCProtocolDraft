@@ -14,7 +14,7 @@ import { deploy } from '../scripts/deploy';
 import { IContracts } from '../scripts/deploy.type';
 
 withSnapshot('COPY Contract', () => {
-  
+    
     let owner: SignerWithAddress;
     let addr1: SignerWithAddress;
     let addr2: SignerWithAddress;
@@ -30,14 +30,14 @@ withSnapshot('COPY Contract', () => {
 
     describe('end-to-end tests', async () => {
 
-        it('Creator should be able to set up a Validation Rule', async ()=> {
+        it('Creator should be able to set up a Validation Rule for Collector to mint copies', async ()=> {
 
             // mint a token
             await contracts.mock.ERC721.connect(addr1).create(
                 addr1.address,
                 CONTENT
             );
-
+            
             // get creator Id
             let balance = (await contracts.mock.ERC721.balanceOf(addr1.address)).toNumber();
             let creatorId = (await contracts.mock.ERC721.tokenOfOwnerByIndex(addr1.address, balance-1)).toString();
@@ -69,11 +69,11 @@ withSnapshot('COPY Contract', () => {
             });
 
             // set mintable rule
-            await contracts.distributor.connect(addr1).setDistributionRule(
+            await expect(contracts.distributor.connect(addr1).setDistribution(
                 mintInfo,
                 getEncodedValidationData(valInfo) // data
-            );
-
+            )).to.not.be.reverted;
+            
             // original balance
             let walletBalance = await contracts.mock.ERC20.balanceOf(addr2.address);
 
@@ -87,13 +87,13 @@ withSnapshot('COPY Contract', () => {
             await contracts.mock.ERC20.connect(addr2).approve(contracts.validator.address, 10000000000);
             
             // get the copyHash
-            let copyHash = (await contracts.distributor.getCopyHashes({
+            let copyHash = (await contracts.distributor.getDistHashes({
                 contractAddress: contracts.mock.ERC721.address,
                 tokenId: creatorId
             }))[0];
 
             // get a copy
-            await contracts.distributor.connect(addr2).create(addr2.address, copyHash);
+            await contracts.distributor.connect(addr2).mint(addr2.address, copyHash);
             
             // get copy Id
             let copyBalance = (await contracts.distributor.balanceOf(addr2.address)).toNumber();

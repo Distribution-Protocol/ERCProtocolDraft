@@ -4,36 +4,36 @@ pragma solidity >=0.8.0 <0.9.0;
 
 /**
  * @notice The Interface of the Contract that supports ERCXXXX. Creator can use the setDistributionRule to specify the condition for minting
- * the copy. Depending on the distribution rules, collector can copy, then update, transfer, extend or destroy the copy. Creator 
- * can revoke the copy if allowed in distribution rules. This interface is intended to be used for single creator NFT contract. 
- * It can be easily extended to accept request from multiple create NFT contracts.
+ * a distribution of the Creation NFT. A distribution is defined by its origin (Creation NFT), the validator contract that specifies the conditions
+ * to mint, the creator actions and the collector actions.
  * 
- * The MintInfo encapulates the information of the copy NFT, including all the permissions granted to it. This information can be 
- * stored on chain as a MintInfo struct, or simple a hashed version of it to save gas. It comes with a fixed set of basic info, such 
- * as isTransferable, isExtendable, etc, and a bytes field for defining custom additional permissions.
+ * The Validtor interface resides in the IERCXXXXValidator.sol file. Each distribution requires certain conditions that must be fulfilled before
+ * minting. The Validator contract is responsible for the storage as well as the validation of the conditions.
  * 
- * DistributionRules are external contract that is responsible for the defintion and enforcement of rules, that should be fulfilled before 
- * minting a copy NFT
+ * The Creator actions refers to the set of actions that the holder of the creation NFT can perform on the copy NFT.
+ * The Collector actions refers to the set of actions that the holder of the copy NFT can perform.
  * 
- * Creator chooses the DistributionRules that associate with the corresponding MintInfos.
- * Copier fulfils the DistributionRule to obtain a copy and enjoy the benefits brought by the MintInfo.
+ * A Collector can mint a copy of a Distribution given that the conditions specified by the Validator are fulfilled.
+ *
+ * Creation NFT tokens holder can set multiple different distributions, each with different mint conditions, and a different set of actions that the token holder
+ * will be empowered with after the minting of the token.
  */
 interface IDistributor {
 
     /**
      * @dev Emitted when a distribution rule is created
      * 
-     * @param ruleHash The hash of the copy configuration
-     * @param ruleInfo The distribution rule that the copyHash is generated from
+     * @param distHash The hash of the distribution configuration
+     * @param distribution The distribution that the distHash is generated from
      */
-    event SetDistributionRule(bytes32 ruleHash, RuleInfo ruleInfo);
+    event SetDistribution(bytes32 distHash, Distribution distribution);
     
     /**
      * @dev Emitted when a distribution rule is paused
      * 
-     * @param copyHash The hash of the copy configuration
+     * @param distHash The hash of the copy configuration
      */
-    event PauseDistributionRule(bytes32 copyHash);
+    event PauseDistribution(bytes32 distHash);
 
 
     /**
@@ -49,7 +49,7 @@ interface IDistributor {
      *
      * @param NFTDescriptor The tokenId of the creator NFT that produces the original content
      */
-    struct RuleInfo {
+    struct Distribution {
         NFTDescriptor descriptor;
         address validator;
         bytes4[] creatorActions;
@@ -60,32 +60,32 @@ interface IDistributor {
      * @dev The creator who holds a creator token can set a distribution rule that enables others
      * to mint copies given that they fulfil the conditions specified by the rule
      *
-     * @param ruleInfo the basic states of the copy to be minted
-     * @param ruleInitData the data to be input into the validator address for setup rules
+     * @param distribution the basic states of the copy to be minted
+     * @param initData the data to be input into the validator address for setup rules
      * 
-     * @return ruleHash Returns the hash of the rule conifiguration 
+     * @return distHash Returns the hash of the rule conifiguration 
      */
-    function setDistributionRule(
-        RuleInfo memory ruleInfo,
-        bytes calldata ruleInitData
-    ) external returns (bytes32 ruleHash);
+    function setDistribution(
+        Distribution memory distribution,
+        bytes calldata initData
+    ) external returns (bytes32 distHash);
     
     /**
      * @dev The creator can pause the distribution rule
      *
-     * @param ruleHash the hash of the copy configuration for minting
+     * @param distHash the hash of the copy configuration for minting
      */ 
-    function pauseDistributionRule(
-        bytes32 ruleHash
+    function pauseDistribution(
+        bytes32 distHash
     ) external;
 
     /**
      * @dev The creator can unpause the distribution rule
      *
-     * @param ruleHash the hash of the rule
+     * @param distHash the hash of the rule
      *
      * @return descriptor the creator token
      */
-    function creatorOf(bytes32 ruleHash) external view returns (NFTDescriptor memory descriptor);
+    function creatorOf(bytes32 distHash) external view returns (NFTDescriptor memory descriptor);
 
 }

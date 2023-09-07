@@ -44,7 +44,7 @@ contract Validator is IValidator {
 
 
     event SetupRule(
-        bytes32 ruleHash,
+        bytes32 distHash,
         ValidationInfo validationInfo
     );
     
@@ -54,47 +54,47 @@ contract Validator is IValidator {
     constructor () {}
 
     /// @inheritdoc IValidator
-    function setRule(bytes32 ruleHash, bytes calldata ruleData) external override {
+    function setConditions(bytes32 distHash, bytes calldata ruleData) external override {
         (ValidationInfo memory valInfo) = abi.decode(ruleData, (ValidationInfo));
 
-        // require(valInfo.start > uint64(block.timestamp), "Mintable: Invalid Start Time");
-        _validationInfo[ruleHash] = valInfo;
-        emit SetupRule(ruleHash, valInfo);
+        // require(valInfo.start > uint64(block.timestamp), "Validator: Invalid Start Time");
+        _validationInfo[distHash] = valInfo;
+        emit SetupRule(distHash, valInfo);
     }
     
     /// @inheritdoc IValidator
-    function validate(address to, bytes32 ruleHash, bytes32 task, bytes calldata fullfilmentData) external payable override {
-        _validateMint(to, ruleHash);
-        ++_count[ruleHash];
+    function validate(address to, bytes32 distHash, bytes32 task, bytes calldata fullfilmentData) external payable override {
+        _validateMint(to, distHash);
+        ++_count[distHash];
     }
     
     // no reentrant**
     function _validateMint(
         address to,
-        bytes32 ruleHash
+        bytes32 distHash
     ) internal {
-        ValidationInfo memory valInfo = _validationInfo[ruleHash];
+        ValidationInfo memory valInfo = _validationInfo[distHash];
         // check start time
-        require(valInfo.start < uint64(block.timestamp), "Mintable: Minting Period Not Started");
+        require(valInfo.start < uint64(block.timestamp), "Validator: Minting Period Not Started");
 
         // check deadline (timestamp - start to prevent overflow)
-        require(valInfo.time > uint64(block.timestamp) - valInfo.start, "Mintable: Minting Period Ended");
+        require(valInfo.time > uint64(block.timestamp) - valInfo.start, "Validator: Minting Period Ended");
 
         // check limit
-        require(valInfo.limit > _count[ruleHash], "Mintable: Minting Limit Reached");
+        require(valInfo.limit > _count[distHash], "Validator: Minting Limit Reached");
 
         // check token binding
         if (valInfo.requiredERC721Token != address(0)) {
-            require(IERC721(valInfo.requiredERC721Token).balanceOf(to) > 0, "Mintable: Required ERC721 Token has Zero Balance");
+            require(IERC721(valInfo.requiredERC721Token).balanceOf(to) > 0, "Validator: Required ERC721 Token has Zero Balance");
         }
         
 
-        IDistributor.NFTDescriptor memory descriptor = IDistributor(msg.sender).creatorOf(ruleHash);
+        IDistributor.NFTDescriptor memory descriptor = IDistributor(msg.sender).creatorOf(distHash);
         address creatorAddress = IERC721(descriptor.contractAddress).ownerOf(descriptor.tokenId);
 
         // address(0) is the native token
         if (valInfo.feeToken == address(0)) {
-            require(msg.value >= valInfo.mintAmount, "Mintable: Insufficient Native Tokens");
+            require(msg.value >= valInfo.mintAmount, "Validator: Insufficient Native Tokens");
             payable(creatorAddress).transfer(valInfo.mintAmount);
         } else {
             IERC20(valInfo.feeToken).transferFrom(
@@ -104,23 +104,23 @@ contract Validator is IValidator {
             );
         }
     }
-
+    
     /**
     * @dev This function is called to get the validation rule for a copy token
     *
-    * @param ruleHash the hash of the copy token
+    * @param distHash the hash of the copy token
     * @return validationInfo the validation rule for the copy token
     */
     function getValidationInfo(
-        bytes32 ruleHash
+        bytes32 distHash
     ) external view returns (ValidationInfo memory) {
-        return _validationInfo[ruleHash];
+        return _validationInfo[distHash];
     }
 
     function getMintCount(
-        bytes32 ruleHash
+        bytes32 distHash
     ) external view returns (uint256) {
-        return _count[ruleHash];
+        return _count[distHash];
     }
 
 }

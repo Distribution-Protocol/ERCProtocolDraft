@@ -15,20 +15,20 @@ interface IValidator {
      * can or cannot mint a copy of the creator's NFT content, with the corresponding parameters, such as
      * transferable, updatable etc. see {IValidator-MintInfo}
      *
-     * @param ruleHash The hash of the copy configuration
-     * @param ruleInitData The data bytes for initialising the validationRule. Parameters are encoded into bytes
+     * @param distHash The hash of the copy configuration
+     * @param initData The data bytes for initialising the validationRule. Parameters are encoded into bytes
      */
-    function setRule(bytes32 ruleHash, bytes calldata ruleInitData) external;
+    function setConditions(bytes32 distHash, bytes calldata initData) external;
 
     /**
      * @dev Supply the data that will be used to passed the validator rule setup by the creator. Different
      * rule has different requirement
      *
      * @param to the address that the NFT will be minted to
-     * @param ruleHash the hash of the copy configuration
-     * @param task the task that a specific individual wants to validate
+     * @param distHash the hash of the copy configuration
+     * @param task the task that a specific individual wants to validate. If there is only one task, the task can be empty
      * @param fullfilmentData the data that will be used to passed the validator rule setup by the creator
      */
-    function validate(address to, bytes32 ruleHash, bytes32 task, bytes calldata fullfilmentData) external payable;
+    function validate(address to, bytes32 distHash, bytes32 task, bytes calldata fullfilmentData) external payable;
 
 }

@@ -1,7 +1,6 @@
 import * as dotenv from "dotenv";
 
 import { HardhatUserConfig, task, types } from "hardhat/config";
-import { generateImages } from './scripts/data/generateImages';
 
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-ethers";

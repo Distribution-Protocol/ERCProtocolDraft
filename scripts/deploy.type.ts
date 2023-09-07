@@ -8,17 +8,17 @@ import {
 export interface IContracts {
     distributor: Distributor
     validator: Validator,
-    test: {
-        mockFT: MockFT,
-        mockNFT: MockNFT
+    mock: {
+        ERC20: MockFT,
+        ERC721: MockNFT
     }
 }
 
 export interface IContractAddresses {
     distributor: string,
     validator: string,
-    test: {
-        mockFT: string,
-        mockNFT: string
+    mock: {
+        ERC20: string,
+        ERC721: string
     }
 }

@@ -4,13 +4,9 @@ import { expect } from 'chai';
 import { CONTENT, ZERO_ADDRESS } from '../utils/constants';
 
 import {
-    getNow,
     getMintData,
     getCopyValidationData,
     getEncodedValidationData,
-    Statement,
-    PermSig,
-    getPermSig
 } from '../utils';
 
 import {
@@ -33,7 +29,6 @@ withSnapshot('MINTABLE Contract', () => {
     let mockFT: MockFT;
 
     let mintInfo: any;
-    let permSig: PermSig;
 
     before(async function () {
         [owner, addr1, addr2, addr3, ...addrs] = await ethers.getSigners();
@@ -42,18 +37,9 @@ withSnapshot('MINTABLE Contract', () => {
 
         // mint rule
         mintInfo = {
-            mintable: contracts.mintable.address,
-            creatorId: 0, // dummy 
-            statement: Statement.DISTRIBUTE,
-            transferable: true,
-            updatable: true,
-            revokable: true,
-            extendable: true,
-            mintInfoAdditional: "0x"
+            validator: contracts.validator.address,
+            creatorId: 0,
         };
-
-        // set Permission
-        permSig = await getPermSig(addr1, CONTENT.contentUri, CONTENT.copyright, 1000000);
 
         // deploy mock ERC20 contract
         mockFT = await new MockFT__factory(owner).deploy("MOCK_USDT", "MUSDT");

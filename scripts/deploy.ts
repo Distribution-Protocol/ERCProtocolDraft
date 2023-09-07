@@ -5,8 +5,8 @@ import fs from 'fs';
 import {
   Validator__factory,
   Distributor__factory,
-  MockFT__factory,
-  MockNFT__factory
+  MockERC20__factory,
+  MockERC721__factory
 } from "../typechain-types";
 
 import { DEPLOY_CACHE } from '../utils/constants';
@@ -18,7 +18,7 @@ let addrs: SignerWithAddress[];
 export async function deploy(isMain=false): Promise<IContracts> {
 
   [owner, ...addrs] = await ethers.getSigners();
-
+  
   // deploy copy contract
   let distributorContract = await new Distributor__factory(owner).deploy("Collection", "COL");
 
@@ -26,15 +26,15 @@ export async function deploy(isMain=false): Promise<IContracts> {
   let validatorContract = await new Validator__factory(owner).deploy();
 
   // deploy test contracts
-  let mockFT = await new MockFT__factory(owner).deploy("MOCK_USDT", "MUSDT");
-  let mockNFT = await new MockNFT__factory(owner).deploy("MOCK_NFT", "MNFT");
+  let mockFT = await new MockERC20__factory(owner).deploy("MOCK_USDT", "MUSDT");
+  let mockNFT = await new MockERC721__factory(owner).deploy("MOCK_NFT", "MNFT");
 
   let contracts = {
     distributor: distributorContract,
     validator: validatorContract,
-    test: {
-      mockFT: mockFT,
-      mockNFT: mockNFT
+    mock: {
+      ERC20: mockFT,
+      ERC721: mockNFT
     }
   }
 

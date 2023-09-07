@@ -5,13 +5,9 @@ import { CONTENT, ZERO_ADDRESS } from '../utils/constants';
 import { withSnapshot } from '../utils/helper';
 
 import {
-    getNow,
-    getMintData,
     getCopyValidationData,
     getEncodedValidationData,
-    Statement,
-    PermSig,
-    getPermSig
+    getNow
 } from '../utils';
 
 import { deploy } from '../scripts/deploy';
@@ -37,38 +33,27 @@ withSnapshot('COPY Contract', () => {
 
         it('Creator should be able to set up a Mintable Rule', async ()=> {
 
-            // set Permission
-            let permSig: PermSig = await getPermSig(addr1, CONTENT.contentUri, CONTENT.copyright, 1000000);
-
             // mint a token
-            await contracts.creator.connect(addr1).create(
+            await contracts.mock.ERC721.connect(addr1).create(
                 addr1.address,
-                CONTENT.contentUri,
-                permSig
-                );
+                CONTENT.contentUri
+            );
 
             // get creator Id
-            let balance = (await contracts.creator.balanceOf(addr1.address)).toNumber();
-            let creatorId = (await contracts.creator.tokenOfOwnerByIndex(addr1.address, balance-1)).toString();
+            let balance = (await contracts.mock.ERC721.balanceOf(addr1.address)).toNumber();
+            let creatorId = (await contracts.mock.ERC721.tokenOfOwnerByIndex(addr1.address, balance-1)).toString();
 
             // mint rule
             let mintInfo = {
-                mintable: contracts.mintable.address,
-                creatorId: creatorId,
-                statement: Statement.DISTRIBUTE,
-                transferable: true,
-                updatable: true,
-                revokable: true,
-                extendable: true,
-                mintInfoAdditional: "0x"
+                validator: contracts.validator.address,
+                nft: creatorId,
               };
 
             let valInfo = getCopyValidationData({
-                feeToken: contracts.test.mockFT.address,
+                feeToken: contracts.mock.ERC20.address,
                 duration: 60 * 60 * 24 * 30,
                 fragmented: true,
                 mintAmount: 10000000000,
-                extendAmount: 10000000000,
                 requiredERC721Token: ZERO_ADDRESS,
                 limit: 3,
                 start: getNow()-1000,
@@ -76,43 +61,43 @@ withSnapshot('COPY Contract', () => {
             });
 
             // set mintable rule
-            await contracts.copy.connect(addr1).setMintableRule(
+            await contracts.distributor.connect(addr1).setDistributionRule(
                 mintInfo,
                 getEncodedValidationData(valInfo) // data
             );
 
             // original balance
-            let walletBalance = await contracts.test.mockFT.balanceOf(addr2.address);
+            let walletBalance = await contracts.mock.ERC20.balanceOf(addr2.address);
 
             // copier go get some mockFT
-            await contracts.test.mockFT.connect(addr2).mint(addr2.address, 20000000000);
+            await contracts.mock.ERC20.connect(addr2).mint(addr2.address, 20000000000);
 
             // check balance
-            expect((await contracts.test.mockFT.balanceOf(addr2.address)).toNumber()).to.eq(walletBalance.add(20000000000));
+            expect((await contracts.mock.ERC20.balanceOf(addr2.address)).toNumber()).to.eq(walletBalance.add(20000000000));
             
             // set allowance
-            await contracts.test.mockFT.connect(addr2).approve(contracts.mintable.address, 10000000000);
+            await contracts.mock.ERC20.connect(addr2).approve(contracts.mintable.address, 10000000000);
             
             // get the copyHash
-            let copyHash = (await contracts.copy.getCopyHashes(creatorId))[0];
+            let copyHash = (await contracts.distributor.getCopyHashes(creatorId))[0];
 
             // get a copy
-            await contracts.copy.connect(addr2).create(
+            await contracts.distributor.connect(addr2).create(
                 addr2.address,
                 copyHash,
                 60 * 60 * 24 * 30
                 )
             
             // get copy Id
-            let copyBalance = (await contracts.copy.balanceOf(addr2.address)).toNumber();
+            let copyBalance = (await contracts.distributor.balanceOf(addr2.address)).toNumber();
             expect(copyBalance).to.gt(0);
-            let copyId = (await contracts.copy.tokenByIndex(copyBalance-1)).toString();
+            let copyId = (await contracts.distributor.tokenByIndex(copyBalance-1)).toString();
 
             // check balance after transaction
-            expect((await contracts.test.mockFT.balanceOf(addr2.address)).toNumber()).to.eq(walletBalance.add(10000000000));
+            expect((await contracts.mock.ERC20.balanceOf(addr2.address)).toNumber()).to.eq(walletBalance.add(10000000000));
             
             // check copy NFT data
-            expect(await contracts.copy.tokenURI(copyId)).to.eq(CONTENT.contentUri);
+            expect(await contracts.distributor.tokenURI(copyId)).to.eq(CONTENT.contentUri);
         })
 
         it('Creator should be able to set up a Mintable Rule with Help[er', async ()=> {
@@ -133,7 +118,7 @@ withSnapshot('COPY Contract', () => {
             };
         
             let valInfo = getCopyValidationData({
-                feeToken: contracts.test.mockFT.address,
+                feeToken: contracts.mock.ERC20.address,
                 duration: 60 * 60 * 24 * 30,
                 fragmented: true,
                 mintAmount: 10000000000,
@@ -158,37 +143,37 @@ withSnapshot('COPY Contract', () => {
             let creatorId = (await contracts.creator.tokenOfOwnerByIndex(addr1.address, balance-1)).toString();
 
             // original balance
-            let walletBalance = await contracts.test.mockFT.balanceOf(addr2.address);
+            let walletBalance = await contracts.mock.ERC20.balanceOf(addr2.address);
 
             // copier go get some mockFT
-            await contracts.test.mockFT.connect(addr2).mint(addr2.address, 20000000000);
+            await contracts.mock.ERC20.connect(addr2).mint(addr2.address, 20000000000);
 
             // check balance
-            expect((await contracts.test.mockFT.balanceOf(addr2.address)).toNumber()).to.eq(walletBalance.add(20000000000));
+            expect((await contracts.mock.ERC20.balanceOf(addr2.address)).toNumber()).to.eq(walletBalance.add(20000000000));
             
             // set allowance
-            await contracts.test.mockFT.connect(addr2).approve(contracts.mintable.address, 10000000000);
+            await contracts.mock.ERC20.connect(addr2).approve(contracts.mintable.address, 10000000000);
             
             // get the copyHash
-            let copyHash = (await contracts.copy.getCopyHashes(creatorId))[0];
+            let copyHash = (await contracts.distributor.getCopyHashes(creatorId))[0];
             
             // get a copy
-            await contracts.copy.connect(addr2).create(
+            await contracts.distributor.connect(addr2).create(
                 addr2.address,
                 copyHash,
                 60 * 60 * 24 * 30
                 )
                 
             // get copy Id
-            let copyBalance = (await contracts.copy.balanceOf(addr2.address)).toNumber();
+            let copyBalance = (await contracts.distributor.balanceOf(addr2.address)).toNumber();
             expect(copyBalance).to.gt(0);
-            let copyId = (await contracts.copy.tokenByIndex(copyBalance-1)).toString();
+            let copyId = (await contracts.distributor.tokenByIndex(copyBalance-1)).toString();
 
             // check balance after transaction
-            expect((await contracts.test.mockFT.balanceOf(addr2.address)).toNumber()).to.eq(walletBalance.add(10000000000));
+            expect((await contracts.mock.ERC20.balanceOf(addr2.address)).toNumber()).to.eq(walletBalance.add(10000000000));
             
             // check copy NFT data
-            expect(await contracts.copy.tokenURI(copyId)).to.eq(CONTENT.contentUri);
+            expect(await contracts.distributor.tokenURI(copyId)).to.eq(CONTENT.contentUri);
         })
  
     })

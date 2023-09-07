@@ -1,15 +1,8 @@
 import { ethers } from 'ethers';
-import { BigNumberish, Signer } from 'ethers';
-import { keccak256, BytesLike } from 'ethers/lib/utils';
-
-export const Statement = {
-    DISTRIBUTE: 'DISTRIBUTE',
-    USE: 'USE',
-    MODIFY: 'MODIFY'
-}
+import { BigNumberish } from 'ethers';
 
 export type CopyMintTuple = [string, BigNumberish, string, boolean, boolean, boolean, boolean];
-export type CopyValidationTuple = [string, BigNumberish, boolean, BigNumberish, BigNumberish, string, BigNumberish, BigNumberish, BigNumberish];
+export type CopyValidationTuple = [string, BigNumberish, boolean, BigNumberish, string, BigNumberish, BigNumberish, BigNumberish];
 
 export interface CopyMintData {
     mintable: string,
@@ -26,20 +19,11 @@ export interface CopyValidationData {
     duration: BigNumberish;
     fragmented: boolean;
     mintAmount: BigNumberish;
-    extendAmount: BigNumberish;
     requiredERC721Token: string;
     limit: BigNumberish;
     start: BigNumberish;
     time: BigNumberish;
 }
-
-export interface PermSig {
-  deadline: number;
-  v: number;
-  s: BytesLike;
-  r: BytesLike;
-}
-
 
 export const getMintData = (data: CopyMintData): CopyMintTuple => {
     return [
@@ -66,7 +50,6 @@ export const getCopyValidationData = (data: CopyValidationData): CopyValidationT
       data.duration,
       data.fragmented,
       data.mintAmount,
-      data.extendAmount,
       data.requiredERC721Token,
       data.limit,
       data.start,
@@ -80,37 +63,4 @@ export const getNow = (): number => {
 
 export const getDeadline = (seconds: number) => {
   return getNow() + seconds;
-};
-
-const getPermMessage = (contentUri: string, copyrightStatement: string, deadline: number) => {
-  return keccak256(
-    ethers.utils.defaultAbiCoder.encode(
-      ['string', 'string', 'uint256'],
-      [contentUri, copyrightStatement, deadline]
-    )
-  );
-};
-
-const parseSignature = (signature: string) => {
-  let r = "0x" + signature.slice(2, 66);
-  let s = "0x" + signature.slice(66, 130);
-  let v = signature.slice(130, 132) == "1b" ? 27 : 28;
-  return {
-    v: v,
-    s: s,
-    r: r
-  }
-}
-
-export const getPermSig = async (signer: Signer, contentUri: string, copyrightStatement: string, offset: number): Promise<PermSig> => {
-  const deadline = getDeadline(offset);
-  const message = getPermMessage(contentUri, copyrightStatement, deadline);
-  let signature = await signer.signMessage(Buffer.from(message.slice(2), 'hex'));
-  const { v, r, s } = parseSignature(signature);
-  return {
-    deadline: deadline,
-    v: v,
-    r: r,
-    s: s,
-  };
 };

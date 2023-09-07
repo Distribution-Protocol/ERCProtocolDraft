@@ -5,8 +5,8 @@ import fs from 'fs';
 import {
   Validator__factory,
   Distributor__factory,
-  MockFT__factory,
-  MockNFT__factory
+  MockERC20__factory,
+  MockERC721__factory
 } from "../typechain-types";
 
 import { DEPLOY_CACHE } from '../utils/constants';
@@ -28,11 +28,11 @@ export async function attach(): Promise<IContracts> {
 
     let contractAddresses: IContractAddresses = deployedContracts[hre.network.name];
     let contracts = {
-        distributor: (new Distributor__factory(owner)).attach(contractAddresses.copy),
-        validator: (new Validator__factory(owner)).attach(contractAddresses.mintable),
-        test: {
-            mockFT: (new MockFT__factory(owner)).attach(contractAddresses.test.mockFT),
-            mockNFT: (new MockNFT__factory(owner)).attach(contractAddresses.test.mockNFT)
+        distributor: (new Distributor__factory(owner)).attach(contractAddresses.distributor),
+        validator: (new Validator__factory(owner)).attach(contractAddresses.validator),
+        mock: {
+            ERC20: (new MockERC20__factory(owner)).attach(contractAddresses.test.mockFT),
+            ERC721: (new MockERC721__factory(owner)).attach(contractAddresses.test.mockNFT)
         }
     }
     return contracts;

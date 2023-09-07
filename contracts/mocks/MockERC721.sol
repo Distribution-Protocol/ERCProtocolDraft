@@ -5,7 +5,7 @@ import '@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol';
 
 import 'hardhat/console.sol';
 
-contract MockNFT is ERC721Enumerable {
+contract MockERC721 is ERC721Enumerable {
     using Strings for uint256;
 
     string private constant OWNER_ERR = 'Invalid owner';

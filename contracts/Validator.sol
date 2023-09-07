@@ -30,13 +30,11 @@ contract Validator is IValidator {
     * 
     * @param feeToken The contract address of the fee token, i.e. USDT token contract address
     * @param mintAmount The token amount that is required for minting a copy token
-    * @param fragmented Whether fragmented duration is enabled
     * @param duration The time duration that should add to the NFT token after mint
     */
     struct ValidationInfo {
         address feeToken;
-        uint64 duration;        
-        bool fragmented;
+        uint64 duration;
         uint256 mintAmount;
         address requiredERC721Token;
         uint256 limit;

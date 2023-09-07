@@ -1,23 +1,24 @@
-import { ethers } from 'ethers';
+import { BytesLike, ethers } from 'ethers';
 import { BigNumberish } from 'ethers';
 
-export type CopyMintTuple = [string, BigNumberish, string, boolean, boolean, boolean, boolean];
-export type CopyValidationTuple = [string, BigNumberish, boolean, BigNumberish, string, BigNumberish, BigNumberish, BigNumberish];
+// export type MintTuple = [string, BigNumberish, string, boolean, boolean, boolean, boolean];
+export type CopyValidationTuple = [string, BigNumberish, BigNumberish, string, BigNumberish, BigNumberish, BigNumberish];
 
-export interface CopyMintData {
-    mintable: string,
-    creatorId: BigNumberish;
-    statement: string;
-    transferable: boolean;
-    updatable: boolean;
-    revokable: boolean;
-    extendable: boolean;
+export interface NftDescriptor {
+  contractAddress: string,
+  tokenId: BigNumberish,
+}
+
+export interface MintData {
+    validator: string,
+    descriptor: NftDescriptor,
+    creatorActions: BytesLike[],
+    collectorActions: BytesLike[]
 }
 
 export interface CopyValidationData {
     feeToken: string;
     duration: BigNumberish;
-    fragmented: boolean;
     mintAmount: BigNumberish;
     requiredERC721Token: string;
     limit: BigNumberish;
@@ -25,21 +26,9 @@ export interface CopyValidationData {
     time: BigNumberish;
 }
 
-export const getMintData = (data: CopyMintData): CopyMintTuple => {
-    return [
-      data.mintable,
-      data.creatorId,
-      data.statement,
-      data.transferable,
-      data.updatable,
-      data.revokable,
-      data.extendable,
-    ];
-  };
-
 export const getEncodedValidationData = (validationInfo: CopyValidationTuple) => {
 return ethers.utils.defaultAbiCoder.encode(
-    ['tuple(address, uint64, bool, uint256, uint256, address, uint256, uint64, uint64)'],
+    ['tuple(address, uint64, uint256, address, uint256, uint64, uint64)'],
     [validationInfo]
     );
 };
@@ -48,7 +37,6 @@ export const getCopyValidationData = (data: CopyValidationData): CopyValidationT
     return [
       data.feeToken,
       data.duration,
-      data.fragmented,
       data.mintAmount,
       data.requiredERC721Token,
       data.limit,

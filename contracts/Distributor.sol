@@ -24,7 +24,7 @@ contract Distributor is ERC721Enumerable, IDistributor {
     // collector actions
     bytes4 private constant _TRANSFER = 0x23b872dd; // function signiture of 'transferFrom(address,address,uint256)'
     bytes4 private constant _UPDATE = 0x82ab890a; // function signiture of 'update(uint256)'
-    // creator actions
+    // distributor actions
     bytes4 private constant _REVOKE = 0x20c5429b; // function signiture of 'revoke(uint256)'
     
     uint256 private _tokenCounter;
@@ -33,14 +33,14 @@ contract Distributor is ERC721Enumerable, IDistributor {
     mapping(uint256 => bytes32) private _distHash;
     mapping(uint256 => string) private _tokenURI;
 
-    // creatorId => distribution (For Record Keeping, rule info cannot be deleted once set)
+    // nft descriptor => distribution (For Record Keeping, distributions cannot be deleted once set)
     mapping(address=>mapping(uint256 => bytes32[])) _distHashes;
 
     // distribution fields
-    mapping(bytes32 => NFTDescriptor) private _creator;
+    mapping(bytes32 => NFTDescriptor) private _primary;
     mapping(bytes32 => address) private _validator;
-    mapping(bytes32 => mapping(bytes4 => bool)) private _creatorActions;
-    mapping(bytes32 => mapping(bytes4 => bool)) private _collectorActions;
+    mapping(bytes32 => mapping(bytes4 => bool)) private _primaryTokenActions;
+    mapping(bytes32 => mapping(bytes4 => bool)) private _subTokenActions;
     
     // distributions state
     mapping(bytes32 => State) private _states;
@@ -65,7 +65,7 @@ contract Distributor is ERC721Enumerable, IDistributor {
     ) external virtual override onlyCreator(distribution.descriptor) returns (bytes32) {
         bytes32 distHash = _getHash(distribution);
         
-        // distributions are only initiated if not already exists. For distributions in paused state, the rules will change to active
+        // distributions are only initiated if not already exists. For distributions in paused state, the distribution will change to active
         if ( _states[distHash] == State.NIL ) {
             _storeDistribution(distribution, distHash);
             IValidator(distribution.validator).setConditions(distHash, initData);
@@ -81,38 +81,38 @@ contract Distributor is ERC721Enumerable, IDistributor {
         bytes32 distHash
     ) internal {
         _distHashes[distribution.descriptor.contractAddress][distribution.descriptor.tokenId].push(distHash);
-        _creator[distHash] = distribution.descriptor;
+        _primary[distHash] = distribution.descriptor;
         _validator[distHash] = distribution.validator;
         for (uint256 i = 0; i < distribution.creatorActions.length; i++) {
-            _creatorActions[distHash][distribution.creatorActions[i]] = true;
+            _primaryTokenActions[distHash][distribution.creatorActions[i]] = true;
         }
         for (uint256 i = 0; i < distribution.collectorActions.length; i++) {
-            _collectorActions[distHash][distribution.collectorActions[i]] = true;
+            _subTokenActions[distHash][distribution.collectorActions[i]] = true;
         }
     }
 
     /// @inheritdoc IDistributor
     function pauseDistribution(
         bytes32 distHash
-    ) external virtual override onlyCreator(_creator[distHash]) {
+    ) external virtual override onlyCreator(_primary[distHash]) {
         _states[distHash] = State.PAUSED; // disable minting
         emit PauseDistribution(distHash);
     }
     
-    // validate rule and mint
+    // validate condition fulfilment and mint
     function mint(address to, bytes32 distHash) external virtual payable returns (uint256) {
         require(_states[distHash] == State.ACTIVE, 'Distributor: Minting Disabled');
         IValidator(_validator[distHash]).validate{value: msg.value}(to, distHash, bytes32(0), bytes(''));
         
         uint256 tokenId = _mintToken(to);
-        NFTDescriptor memory descriptor = _creator[distHash];
-        _tokenURI[tokenId] = _fetchURIFromCreator(descriptor);
+        NFTDescriptor memory descriptor = _primary[distHash];
+        _tokenURI[tokenId] = _fetchURIFromPrimary(descriptor);
         _distHash[tokenId] = distHash;
         
         return tokenId;
     }
     
-    function revoke(uint256 tokenId) external virtual onlyCreator(creatorOf(tokenId)) {
+    function revoke(uint256 tokenId) external virtual onlyCreator(primaryOf(tokenId)) {
         require(isPermittedCreator(tokenId, _REVOKE), 'Distributor: Non-revokable');
         delete _tokenURI[tokenId];
         delete _distHash[tokenId];
@@ -135,7 +135,7 @@ contract Distributor is ERC721Enumerable, IDistributor {
             _isApprovedOrOwner(_msgSender(), tokenId),
             'ERC721: caller is not token owner nor approved'
         );
-        _tokenURI[tokenId] = _fetchURIFromCreator(creatorOf(tokenId));
+        _tokenURI[tokenId] = _fetchURIFromPrimary(primaryOf(tokenId));
         return _tokenURI[tokenId];
     }
 
@@ -145,7 +145,7 @@ contract Distributor is ERC721Enumerable, IDistributor {
         return tokenId;
     }
 
-    function _fetchURIFromCreator(NFTDescriptor memory descriptor) internal view virtual returns (string memory) {
+    function _fetchURIFromPrimary(NFTDescriptor memory descriptor) internal view virtual returns (string memory) {
         return IERC721Metadata(descriptor.contractAddress).tokenURI(descriptor.tokenId);
     }
 
@@ -198,19 +198,19 @@ contract Distributor is ERC721Enumerable, IDistributor {
     }
 
     function isPermittedCollector(uint256 tokenId, bytes4 func) view public returns (bool) {
-        return _collectorActions[_distHash[tokenId]][func];
+        return _subTokenActions[_distHash[tokenId]][func];
     }
 
     function isPermittedCreator(uint256 tokenId, bytes4 func) view public returns (bool) {
-        return _collectorActions[_distHash[tokenId]][func];
+        return _subTokenActions[_distHash[tokenId]][func];
     }
 
-    function creatorOf(uint256 tokenId) public view virtual returns (NFTDescriptor memory) {
-        return _creator[_distHash[tokenId]];
+    function primaryOf(uint256 tokenId) public view virtual returns (NFTDescriptor memory) {
+        return _primary[_distHash[tokenId]];
     }
 
-    function creatorOf(bytes32 distHash) public view virtual returns (NFTDescriptor memory) {
-        return _creator[distHash];
+    function primaryOf(bytes32 distHash) public view virtual returns (NFTDescriptor memory) {
+        return _primary[distHash];
     }
 
     function getValidationCondition(uint256 tokenId) external view virtual returns (address) {

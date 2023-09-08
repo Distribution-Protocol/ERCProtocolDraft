@@ -22,7 +22,7 @@ export async function deploy(isMain=false): Promise<IContracts> {
   // deploy copy contract
   let distributorContract = await new Distributor__factory(owner).deploy("Collection", "COL");
 
-  // deploy mintable rule
+  // deploy validator
   let validatorContract = await new Validator__factory(owner).deploy();
 
   // deploy test contracts

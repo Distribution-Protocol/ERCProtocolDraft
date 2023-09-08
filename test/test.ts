@@ -13,7 +13,7 @@ import {
 import { deploy } from '../scripts/deploy';
 import { IContracts } from '../scripts/deploy.type';
 
-withSnapshot('COPY Contract', () => {
+withSnapshot('DISTRIBUTOR Contract', () => {
     
     let owner: SignerWithAddress;
     let addr1: SignerWithAddress;
@@ -30,7 +30,7 @@ withSnapshot('COPY Contract', () => {
 
     describe('end-to-end tests', async () => {
 
-        it('Creator should be able to set up a Validation Rule for Collector to mint copies', async ()=> {
+        it('Creator should be able to set up a Validation Conditions for Collector to mint copies', async ()=> {
 
             // mint a token
             await contracts.mock.ERC721.connect(addr1).create(
@@ -42,7 +42,6 @@ withSnapshot('COPY Contract', () => {
             let balance = (await contracts.mock.ERC721.balanceOf(addr1.address)).toNumber();
             let creatorId = (await contracts.mock.ERC721.tokenOfOwnerByIndex(addr1.address, balance-1)).toString();
 
-            // mint rule
             let mintInfo = {
                 validator: contracts.validator.address,
                 descriptor: {
@@ -68,7 +67,6 @@ withSnapshot('COPY Contract', () => {
                 time: 99999999999999
             });
 
-            // set mintable rule
             await expect(contracts.distributor.connect(addr1).setDistribution(
                 mintInfo,
                 getEncodedValidationData(valInfo) // data

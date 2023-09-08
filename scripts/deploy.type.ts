@@ -1,16 +1,16 @@
 import {
     Validator,
     Distributor,
-    MockFT,
-    MockNFT
+    MockERC20,
+    MockERC721
 } from "../typechain-types";
 
 export interface IContracts {
     distributor: Distributor
     validator: Validator,
     mock: {
-        ERC20: MockFT,
-        ERC721: MockNFT
+        ERC20: MockERC20,
+        ERC721: MockERC721
     }
 }
 

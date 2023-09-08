@@ -31,8 +31,8 @@ export async function attach(): Promise<IContracts> {
         distributor: (new Distributor__factory(owner)).attach(contractAddresses.distributor),
         validator: (new Validator__factory(owner)).attach(contractAddresses.validator),
         mock: {
-            ERC20: (new MockERC20__factory(owner)).attach(contractAddresses.test.mockFT),
-            ERC721: (new MockERC721__factory(owner)).attach(contractAddresses.test.mockNFT)
+            ERC20: (new MockERC20__factory(owner)).attach(contractAddresses.mock.ERC20),
+            ERC721: (new MockERC721__factory(owner)).attach(contractAddresses.mock.ERC721)
         }
     }
     return contracts;

@@ -19,8 +19,8 @@ interface IERC20 {
 
 /**
  * @notice This contract is an implementation of the IValidator interface. It is used to enable mintable 
- * and extending a token with a fee charged. The creator will need to setup rules for copier/collector 
- * to follow before a copy token is minted / extended. 
+ * and extending a token with a fee charged. The primary token holder will need to setup conditions for collector 
+ * to follow before a copy token is minted. 
  * 
  */
 contract Validator is IValidator {
@@ -43,7 +43,7 @@ contract Validator is IValidator {
     }
 
 
-    event SetupRule(
+    event SetConditions(
         bytes32 distHash,
         ValidationInfo validationInfo
     );
@@ -54,12 +54,12 @@ contract Validator is IValidator {
     constructor () {}
 
     /// @inheritdoc IValidator
-    function setConditions(bytes32 distHash, bytes calldata ruleData) external override {
-        (ValidationInfo memory valInfo) = abi.decode(ruleData, (ValidationInfo));
+    function setConditions(bytes32 distHash, bytes calldata initData) external override {
+        (ValidationInfo memory valInfo) = abi.decode(initData, (ValidationInfo));
 
         // require(valInfo.start > uint64(block.timestamp), "Validator: Invalid Start Time");
         _validationInfo[distHash] = valInfo;
-        emit SetupRule(distHash, valInfo);
+        emit SetConditions(distHash, valInfo);
     }
     
     /// @inheritdoc IValidator
@@ -89,27 +89,27 @@ contract Validator is IValidator {
         }
         
 
-        IDistributor.NFTDescriptor memory descriptor = IDistributor(msg.sender).creatorOf(distHash);
-        address creatorAddress = IERC721(descriptor.contractAddress).ownerOf(descriptor.tokenId);
+        IDistributor.NFTDescriptor memory descriptor = IDistributor(msg.sender).primaryOf(distHash);
+        address primaryHolder = IERC721(descriptor.contractAddress).ownerOf(descriptor.tokenId);
 
         // address(0) is the native token
         if (valInfo.feeToken == address(0)) {
             require(msg.value >= valInfo.mintAmount, "Validator: Insufficient Native Tokens");
-            payable(creatorAddress).transfer(valInfo.mintAmount);
+            payable(primaryHolder).transfer(valInfo.mintAmount);
         } else {
             IERC20(valInfo.feeToken).transferFrom(
                 to,
-                creatorAddress,
+                primaryHolder,
                 valInfo.mintAmount
             );
         }
     }
-    
+
     /**
-    * @dev This function is called to get the validation rule for a copy token
+    * @dev This function is called to get the validation conditions for a copy token
     *
     * @param distHash the hash of the copy token
-    * @return validationInfo the validation rule for the copy token
+    * @return validationInfo the validation conditions for the copy token
     */
     function getValidationInfo(
         bytes32 distHash

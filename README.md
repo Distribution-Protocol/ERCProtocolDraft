@@ -20,7 +20,13 @@ A distribution is defined as a version of sub-token that associates with the pri
 
 The Collector, upon fulfilling the corresponding conditions from a specific distribution to obtain the sub-token, will be able to use the token within the boundaries set by the creator.
 
+### Flow Diagram 
+
 ![alt text](./assets/Distribution.png?raw=true)
+
+
+
+### Relation Diagram
 
 ![alt text](./assets/Relation.png?raw=true)
 

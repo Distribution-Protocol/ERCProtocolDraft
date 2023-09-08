@@ -48,15 +48,15 @@ withSnapshot('DISTRIBUTOR Contract', () => {
                     contractAddress: contracts.mock.ERC721.address,
                     tokenId: creatorId
                 },
-                creatorActions: [
-                    ACTIONS.CREATOR.REVOKE
+                parentActions: [
+                    ACTIONS.PARENT.REVOKE
                 ],
-                collectorActions: [
-                    ACTIONS.COLLECTOR.TRANSFER,
-                    ACTIONS.COLLECTOR.UPDATE
+                childActions: [
+                    ACTIONS.CHILD.TRANSFER,
+                    ACTIONS.CHILD.UPDATE
                 ]
               };
-
+            
             let valInfo = getCopyValidationData({
                 feeToken: contracts.mock.ERC20.address,
                 duration: 60 * 60 * 24 * 30,
@@ -67,7 +67,7 @@ withSnapshot('DISTRIBUTOR Contract', () => {
                 time: 99999999999999
             });
 
-            await expect(contracts.distributor.connect(addr1).setDistribution(
+            await expect(contracts.distributor.connect(addr1).setEdition(
                 mintInfo,
                 getEncodedValidationData(valInfo) // data
             )).to.not.be.reverted;

@@ -1,30 +1,31 @@
 ---
 eip: <to be assigned>
 title: ERC721Copy
-description: NFT Copy Creation under conditions specified by the creator
+description: NFT Copy Creation under rules specified by the creator
 author: Henry Yeung (@henrywfyeung), Xiaoba <99x.capital@gmail.com>
 discussions-to: <URL>
 status: Draft
 type: Standards Track
 category (*only required for Standards Track): ERC
-created: 2023-04-01
+created: 2023-09-01
 requires (*optional): 165, 721
 ---
 
 ## Abstract
 This standard is an extension of [EIP-721](./eip-721.md). This standard enables any primary token, i.e. token from any EIP-721 compliant contracts, to work as an original that conditionally allows the production of sub-tokens with specific privileges attached.
 
-The Creator, who holds the primary ERC721 token, can specify the conditions to mint a sub-token from a particular distribution of the primary token.
+The Creator, who holds the primary ERC721 token, can specify the rules to mint a sub-token from a particular distribution of the primary token.
 
-A distribution is defined as a version of sub-token that associates with the primary token. The holder of the sub-token under a distribution, gains the permission to invoke certain functions on the sub-token contract. Each primary token can be associated with multiple distributions, each with different conditions to obtain sub-tokens, and different level of privalleges attached.
+A distribution is defined as a version of sub-token that associates with the primary token. The holder of the sub-token under a distribution, gains the permission to invoke certain functions on the sub-token contract. Each primary token can be associated with multiple distributions, each with different rules to obtain sub-tokens, and different level of privalleges attached.
 
-The Collector, upon fulfilling the corresponding conditions from a specific distribution to obtain the sub-token, will be able to use the token within the boundaries set by the creator.
+The Collector, upon fulfilling the corresponding rules from a specific distribution to obtain the sub-token, will be able to use the token within the boundaries set by the creator.
 
 ### Flow Diagram 
 
 ![alt text](./assets/Distribution.png?raw=true)
 
-
+- The creator can create distributions from any primary token which enables minting of sub-tokens based on a set of rules, with privileges attached
+- The collector can satisfies rules to mint sub-tokens from the pre-defined distributions, 
 
 ### Relation Diagram
 
@@ -33,13 +34,13 @@ The Collector, upon fulfilling the corresponding conditions from a specific dist
 ## Motivation
 This standard solves the following problems.
 
-- Copy Issuance of Unique Artwork/Content: Artists create unique artworks. There could be multiple collectors who want to keep a copy of their artworks. This standard serves as a tool to issue multiple copies of the same kind. The copies can be created with different functions and under different conditions. It gives sufficient flexibility to both the Creator and the Collector.
+- Copy Issuance of Unique Artwork/Content: Artists create unique artworks. There could be multiple collectors who want to keep a copy of their artworks. This standard serves as a tool to issue multiple copies of the same kind. The copies can be created with different functions and under different rules. It gives sufficient flexibility to both the Creator and the Collector.
 - Partial Copyright Transfer: This standard enables Creators to conditionally delegate the copyright, i.e. the right to produce derivative work, to the Collectors. There is no need to sell the original copy, i.e. creator token, in the market. The Creator can instead keep the token as proof of authorship, and the key to manage copy issurance.
 
 This standard will serve a wide range of usecases, coupled with the followings:
 
 - Decentralized storage facilities, such as Arweave, that enables permissionless, permanent and tamper-proof storage of content. The purchase of any copy NFT guarantees the owner the right to access such content.
-- Decentralized Encrption Protocol, such as Lit Protocol, that enables the encryption of content specified by on-chain conditions. This enables selective reveal of content based on Copy NFT ownership and its expiry date.
+- Decentralized Encrption Protocol, such as Lit Protocol, that enables the encryption of content specified by on-chain rules. This enables selective reveal of content based on Copy NFT ownership and its expiry date.
 
 People with the following use cases can consider applying this standard:
 - Creator of any unique Art/Music NFTs can use this standard to sell copies to audiences. With this standard, they can retain some control over the copies.
@@ -81,7 +82,7 @@ The Copy Contract permits the minting of tokens that process the following chara
 - updateable: Allows the copy NFT holder to update the NFT content when the creator NFT is updated
 - statement: Copyright transfer or other forms of declaration from the Creator.
 
-The Mintable Contract can be customized to enforce conditions for Collectors, including:
+The Mintable Contract can be customized to enforce rules for Collectors, including:
 - Fee: Requires payment to mint
 - Free: No Condition to mint
 - NFT Holder: Process a particular NFT to mint
@@ -109,17 +110,17 @@ pragma solidity >=0.8.0 <0.9.0;
  * @notice The Interface dictates how the holder of any ERC721 compiant tokens (primary token) can create distributions that collectors can conditionally 
  * mint sub-tokens that gives certain privaleges to both parties. Creator can use the setDistribution to specify the condition for minting
  * a distribution of the primary token. A distribution is defined by a Nft descriptor to the primary token, the validator contract 
- * that specifies the conditions to mint, the creator actions and the collector actions.
+ * that specifies the rules to mint, the creator actions and the collector actions.
  * 
- * The Validtor interface resides in the IERCXXXXValidator.sol file. Each distribution requires certain conditions that must be fulfilled before
- * minting. The Validator contract is responsible for the storage as well as the validation of the conditions.
+ * The Validtor interface resides in the IERCXXXXValidator.sol file. Each distribution requires certain rules that must be fulfilled before
+ * minting. The Validator contract is responsible for the storage as well as the validation of the rules.
  * 
  * The Creator actions refers to the set of actions that the holder of the primary token can perform on the sub-tokens.
  * The Collector actions refers to the set of actions that the holder of the sub-tokens can perform.
  * 
- * A Collector can mint a sub-token of a Distribution given that the conditions specified by the Validator are fulfilled.
+ * A Collector can mint a sub-token of a Distribution given that the rules specified by the Validator are fulfilled.
  *
- * Primary tokens holder can set multiple different distributions, each with different mint conditions, and a different set of actions that the token holder
+ * Primary tokens holder can set multiple different distributions, each with different mint rules, and a different set of actions that the token holder
  * will be empowered with after the minting of the token.
  */
 interface IDistributor {
@@ -162,10 +163,10 @@ interface IDistributor {
 
     /**
      * @dev The creator who holds a primary token can set a distribution that enables others
-     * to mint copies given that they fulfil the given conditions
+     * to mint copies given that they fulfil the given rules
      *
      * @param distribution the basic states of the sub-token to be minted
-     * @param initData the data to be input into the validator contract for setup the conditions
+     * @param initData the data to be input into the validator contract for setup the rules
      * 
      * @return distHash Returns the hash of the distribution conifiguration 
      */
@@ -202,8 +203,8 @@ interface IDistributor {
 pragma solidity >=0.8.0 <0.9.0;
 
 /**
- * @notice This is the interface of the Validator Contract, the validator contract specifies the conditions that needs to be fulfilled, 
- * and enforce the fulfillment of these conditions. The Creator is required to first register these conditions onto a particular distribution, 
+ * @notice This is the interface of the Validator Contract, the validator contract specifies the rules that needs to be fulfilled, 
+ * and enforce the fulfillment of these rules. The Creator is required to first register these rules onto a particular distribution, 
  * identified by the hash of the distribution configuration (distHash). 
  * When a collector wants to mint a copy of the distribution, or want to perform certain action that requires additional 
  * permission, the collector will need to pass the validation by successfully calling the validate function.  
@@ -211,29 +212,29 @@ pragma solidity >=0.8.0 <0.9.0;
  * In the validation process, the collector will need to supply the basic information including initiator (the address of the collector), 
  * distHash, and optional parameters, such as task and fullfilmentData.
  * task is required if the validation function implements validation processes on more than one task. For example, collectors need to fulfil one set of
- * validation conditions for minting a copy, and another set for extending the valid duration of the copy. The set up can be 
+ * validation rules for minting a copy, and another set for extending the valid duration of the copy. The set up can be 
  * different depending on the usecases.
  * fulfulmentData is the additional data passed to the function
  */
 interface IValidator {
 
     /**
-     * @dev Sets up the validator conditions by the distribution hash and the data for initialisation. This function will
-     * decode the data back to the required parameters and sets up the conditions that decides who
+     * @dev Sets up the validator rules by the distribution hash and the data for initialisation. This function will
+     * decode the data back to the required parameters and sets up the rules that decides who
      * can or cannot mint a copy of the distribution. see {IValidator-MintInfo}
      *
      * @param distHash The hash of the copy configuration
-     * @param initData The data bytes for initialising the validation conditions. Parameters are encoded into bytes
+     * @param initData The data bytes for initialising the validation rules. Parameters are encoded into bytes
      */
-    function setConditions(bytes32 distHash, bytes calldata initData) external;
+    function setRules(bytes32 distHash, bytes calldata initData) external;
 
     /**
-     * @dev Supply the data that will be used to validate the fulfilment of the conditions setup by the creator.
+     * @dev Supply the data that will be used to validate the fulfilment of the rules setup by the creator.
      *
      * @param initiator the party who initiate vadiation on a particular task
      * @param distHash the hash of the copy configuration
      * @param task the task that a specific individual wants to validate. If there is only one task, the task can be empty
-     * @param fullfilmentData the data that will be used to passed the validator conditions setup by the creator
+     * @param fullfilmentData the data that will be used to passed the validator rules setup by the creator
      */
     function validate(address initiator, bytes32 distHash, bytes32 task, bytes calldata fullfilmentData) external payable;
 }

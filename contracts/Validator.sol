@@ -19,7 +19,7 @@ interface IERC20 {
 
 /**
  * @notice This contract is an implementation of the IValidator interface. It is used to enable mintable 
- * and extending a token with a fee charged. The primary token holder will need to setup conditions for collector 
+ * and extending a token with a fee charged. The primary token holder will need to setup rules for collector 
  * to follow before a copy token is minted. 
  * 
  */
@@ -43,7 +43,7 @@ contract Validator is IValidator {
     }
 
 
-    event SetConditions(
+    event SetRules(
         bytes32 distHash,
         ValidationInfo validationInfo
     );
@@ -54,12 +54,12 @@ contract Validator is IValidator {
     constructor () {}
 
     /// @inheritdoc IValidator
-    function setConditions(bytes32 distHash, bytes calldata initData) external override {
+    function setRules(bytes32 distHash, bytes calldata initData) external override {
         (ValidationInfo memory valInfo) = abi.decode(initData, (ValidationInfo));
 
         // require(valInfo.start > uint64(block.timestamp), "Validator: Invalid Start Time");
         _validationInfo[distHash] = valInfo;
-        emit SetConditions(distHash, valInfo);
+        emit SetRules(distHash, valInfo);
     }
     
     /// @inheritdoc IValidator
@@ -88,8 +88,8 @@ contract Validator is IValidator {
             require(IERC721(valInfo.requiredERC721Token).balanceOf(to) > 0, "Validator: Required ERC721 Token has Zero Balance");
         }
         
-
-        IDistributor.NFTDescriptor memory descriptor = IDistributor(msg.sender).primaryOf(distHash);
+        
+        IDistributor.NFTDescriptor memory descriptor = IDistributor(msg.sender).parentOf(distHash);
         address primaryHolder = IERC721(descriptor.contractAddress).ownerOf(descriptor.tokenId);
 
         // address(0) is the native token
@@ -106,10 +106,10 @@ contract Validator is IValidator {
     }
 
     /**
-    * @dev This function is called to get the validation conditions for a copy token
+    * @dev This function is called to get the validation rules for a copy token
     *
     * @param distHash the hash of the copy token
-    * @return validationInfo the validation conditions for the copy token
+    * @return validationInfo the validation rules for the copy token
     */
     function getValidationInfo(
         bytes32 distHash

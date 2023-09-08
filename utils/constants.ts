@@ -5,10 +5,10 @@ export const DEPLOY_CACHE = 'deployedContracts.json';
 export const CONTENT = "CONTENT";
 
 export const ACTIONS = {
-    CREATOR: {
+    PARENT: {
         REVOKE: "0x20c5429b"
     },
-    COLLECTOR: {
+    CHILD: {
         UPDATE: "0x82ab890a",
         TRANSFER: "0x23b872dd"
     }

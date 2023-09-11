@@ -37,7 +37,7 @@ export async function deploy(isMain=false): Promise<IContracts> {
       ERC721: mockNFT
     }
   }
-
+  
   let contractAddresses = {
     distributor: distributorContract.address,
     validator: validatorContract.address,

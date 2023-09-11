@@ -20,7 +20,9 @@ Each parent token can create multiple editions, each with different set of rules
 
 Upon fulfilling the corresponding rules from a specific editions, one can obtain the child token and will be able to use the token within the boundaries set by the parent token holder.
 
-![alt text](./assets/ERCXXXX.png?raw=true)
+<p align="center">
+    <img src="./assets/ERCXXXX.png">
+</p>
 
 ## Motivation
 

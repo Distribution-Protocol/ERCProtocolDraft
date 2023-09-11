@@ -1,7 +1,7 @@
 ---
 eip: <to be assigned>
-title: ERC721Copy
-description: Multi-Tier child NFTs
+title: Multi-Tier Dependant NFTs
+description: A specification on the distribution of multiple editions of child NFTs with abitrary rules and privileges.
 author: Henry Yeung (henrywfyeung@gmail.com), Xiaoba <99x.capital@gmail.com>
 discussions-to: <URL>
 status: Draft
@@ -12,7 +12,7 @@ requires (*optional): 165, 721
 ---
 
 ## Abstract
-This standard is an extension of [EIP-721](./eip-721.md). This standard enables any EIP-721 compliant tokens, to conditionally permit the minting of various editions of child tokens with specific privileges attached.
+This standard is an extension of [EIP-721](./eip-721.md), which enables any EIP-721 compliant tokens, to conditionally permit the minting of various editions of child tokens with specific privileges attached.
 
 Edition is defined as a version of child token that encapsulates a descriptor to the parent, the address to a validator that validates rules before minting the child token, and a set of actions that can be invoked upon obtaining the child token.
 

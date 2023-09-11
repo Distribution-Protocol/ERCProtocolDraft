@@ -3,38 +3,35 @@ pragma solidity >=0.8.0 <0.9.0;
 
 
 /**
- * @notice The Interface dictates how the holder of any ERC721 compiant tokens (parent token) can create editions that collectors can conditionally 
- * mint child tokens that gives certain privaleges to both parties. Creator can use the setEdition to specify the condition for minting
- * a edition of the parent token. A edition is defined by a Nft descriptor to the parent token, the validator contract 
- * that specifies the rules to mint, the creator actions and the collector actions.
- * 
- * The Validtor interface resides in the IERCXXXXValidator.sol file. Each edition requires certain rules that must be fulfilled before
- * minting. The Validator contract is responsible for the storage as well as the validation of the rules.
- * 
- * The Creator actions refers to the set of actions that the holder of the parent token can perform on the child tokens.
- * The Collector actions refers to the set of actions that the holder of the child tokens can perform.
- * 
- * A Collector can mint a child token of a Edition given that the rules specified by the Validator are fulfilled.
+ * @notice The Distributor interface dictates how the holder of any ERC721 compliant tokens (parent token) 
+ * can create editions that collectors can conditionally mint child tokens from. Parent token holder can 
+ * use the setEdition to specify the condition for minting an edition of the parent token. An edition is 
+ * defined by a Nft descriptor to the parent token, the address of the validator contract that specifies
+ *  the rules to obtain the child token, the actions that is allowed after obtaining the token.
+ *   
+ * A Collector can mint a child token of an Edition given that the rules specified by the Validator are 
+ * fulfilled.
  *
- * Parent tokens holder can set multiple different editions, each with different mint rules, and a different set of actions that the token holder
- * will be empowered with after the minting of the token.
+ * Parent tokens holder can set multiple different editions, each with different set of rules, and a 
+ * different set of actions that the token holder will be empowered with after the minting of the token.
  */
 interface IDistributor {
 
     /**
-     * @dev Emitted when a edition is created
+     * @dev Emitted when a nedition is created
      * 
-     * @param distHash The hash of the edition configuration
-     * @param edition The edition that the distHash is generated from
+     * @param editionHash The hash of the edition configuration
+     * @param edition The edition that the editionHash is generated from
+     * @param initData The data bytes for initialising the validator.
      */
-    event SetEdition(bytes32 distHash, Edition edition);
+    event SetEdition(bytes32 editionHash, Edition edition, bytes initData);
     
     /**
-     * @dev Emitted when a edition is paused
+     * @dev Emitted when an edition is paused
      * 
-     * @param distHash The hash of the edition configuration
+     * @param editionHash The hash of the edition configuration
      */
-    event PauseEdition(bytes32 distHash);
+    event PauseEdition(bytes32 editionHash);
 
 
     /**
@@ -46,47 +43,51 @@ interface IDistributor {
     }
     
     /**
-     * @dev Edition struct that specifies the input to the validation function
+     * @dev Edition struct holds the parameters that describes an edition
      *
-     * @param NFTDescriptor The tokenId of the parent token
+     * @param NFTDescriptor The token descriptor of the parent token
+     * @param validator The address of the validator contract
+     * @param actions The functions in the descriptor contract that will be permitted.
+     * It is a binary mask corresponds to 96 potential functions
      */
     struct Edition {
         NFTDescriptor descriptor;
         address validator;
-        bytes4[] parentActions;
-        bytes4[] childActions;
+        uint96 actions;
     }
 
     /**
-     * @dev The creator who holds a parent token can set a edition that enables others
-     * to mint copies given that they fulfil the given rules
+     * @dev The parent token holder can set an edition that enables others
+     * to mint child tokens given that they fulfil the given rules
      *
-     * @param edition the basic states of the child token to be minted
-     * @param initData the data to be input into the validator contract for setup the rules
+     * @param edition the basic parameters of the child token to be minted
+     * @param initData the data to be input into the validator contract for seting up the rules
      * 
-     * @return distHash Returns the hash of the edition conifiguration 
+     * @return editionHash Returns the hash of the edition conifiguration 
      */
     function setEdition(
         Edition memory edition,
         bytes calldata initData
-    ) external returns (bytes32 distHash);
+    ) external returns (bytes32 editionHash);
     
     /**
-     * @dev The creator can pause the edition
+     * @dev The parent token holder can pause the edition
      *
-     * @param distHash the hash of the edition for minting
+     * @param editionHash the hash of the edition
      */ 
     function pauseEdition(
-        bytes32 distHash
+        bytes32 editionHash
     ) external;
 
     /**
-     * @dev The owner can unpause the edition
+     * @dev Find the parent token of an edition
      *
-     * @param distHash the hash of the edition
+     * @param editionHash the hash of the edition
      *
-     * @return descriptor the parent token
+     * @return edition the edition data
      */
-    function parentOf(bytes32 distHash) external view returns (NFTDescriptor memory descriptor);
+    function getEdition(
+        bytes32 editionHash
+    ) external view returns (Edition memory edition);
 
 }

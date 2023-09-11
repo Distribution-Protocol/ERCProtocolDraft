@@ -21,26 +21,23 @@ contract Distributor is ERC721Enumerable, IDistributor {
         ACTIVE   // edition active
     }
 
-    // collector actions
-    bytes4 private constant _TRANSFER = 0x23b872dd; // function signiture of 'transferFrom(address,address,uint256)'
-    bytes4 private constant _UPDATE = 0x82ab890a; // function signiture of 'update(uint256)'
-    // distributor actions
-    bytes4 private constant _REVOKE = 0x20c5429b; // function signiture of 'revoke(uint256)'
+    uint96 private constant _TRANSFER = 1<<0;  // child action
+    uint96 private constant _UPDATE = 1<<1;    // child action
+    uint96 private constant _REVOKE = 1<<2;    // parent action
     
     uint256 private _tokenCounter;
 
-    // tokenId => distHash
-    mapping(uint256 => bytes32) private _distHash;
+    // tokenId => editionHash
+    mapping(uint256 => bytes32) private _editionHash;
     mapping(uint256 => string) private _tokenURI;
 
     // nft descriptor => edition (For Record Keeping, editions cannot be deleted once set)
-    mapping(address=>mapping(uint256 => bytes32[])) _distHashes;
+    mapping(address=>mapping(uint256 => bytes32[])) _editionHashes;
 
     // edition fields
-    mapping(bytes32 => NFTDescriptor) private _parent;
-    mapping(bytes32 => address) private _validator;
-    mapping(bytes32 => mapping(bytes4 => bool)) private _parentActions;
-    mapping(bytes32 => mapping(bytes4 => bool)) private _childActions;
+    mapping(bytes32 => Edition) private _edition;
+    // mapping(bytes32 => address) private _validator;
+    // mapping(bytes32 => uint96) private _actions;
     
     // editions state
     mapping(bytes32 => State) private _states;
@@ -63,59 +60,52 @@ contract Distributor is ERC721Enumerable, IDistributor {
         Edition memory edition,
         bytes calldata initData
     ) external virtual override onlyCreator(edition.descriptor) returns (bytes32) {
-        bytes32 distHash = _getHash(edition);
+        bytes32 editionHash = _getHash(edition);
         
         // editions are only initiated if not already exists. For editions in paused state, the edition will change to active
-        if ( _states[distHash] == State.NIL ) {
-            _storeEdition(edition, distHash);
-            IValidator(edition.validator).setRules(distHash, initData);
+        if ( _states[editionHash] == State.NIL ) {
+            _storeEdition(edition, editionHash);
+            IValidator(edition.validator).setRules(editionHash, initData);
         }
-        _states[distHash] = State.ACTIVE;
+        _states[editionHash] = State.ACTIVE;
         
-        emit SetEdition(distHash, edition);
-        return distHash;
+        emit SetEdition(editionHash, edition, initData);
+        return editionHash;
     }
 
     function _storeEdition(
         Edition memory edition,
-        bytes32 distHash
+        bytes32 editionHash
     ) internal {
-        _distHashes[edition.descriptor.contractAddress][edition.descriptor.tokenId].push(distHash);
-        _parent[distHash] = edition.descriptor;
-        _validator[distHash] = edition.validator;
-        for (uint256 i = 0; i < edition.parentActions.length; i++) {
-            _parentActions[distHash][edition.parentActions[i]] = true;
-        }
-        for (uint256 i = 0; i < edition.childActions.length; i++) {
-            _childActions[distHash][edition.childActions[i]] = true;
-        }
+        _editionHashes[edition.descriptor.contractAddress][edition.descriptor.tokenId].push(editionHash);
+        _edition[editionHash] = edition;
     }
 
     /// @inheritdoc IDistributor
     function pauseEdition(
-        bytes32 distHash
-    ) external virtual override onlyCreator(_parent[distHash]) {
-        _states[distHash] = State.PAUSED; // disable minting
-        emit PauseEdition(distHash);
+        bytes32 editionHash
+    ) external virtual override onlyCreator(_edition[editionHash].descriptor) {
+        _states[editionHash] = State.PAUSED; // disable minting
+        emit PauseEdition(editionHash);
     }
     
     // validate condition fulfilment and mint
-    function mint(address to, bytes32 distHash) external virtual payable returns (uint256) {
-        require(_states[distHash] == State.ACTIVE, 'Distributor: Minting Disabled');
-        IValidator(_validator[distHash]).validate{value: msg.value}(to, distHash, bytes32(0), bytes(''));
+    function mint(address to, bytes32 editionHash) external virtual payable returns (uint256) {
+        require(_states[editionHash] == State.ACTIVE, 'Distributor: Minting Disabled');
+        IValidator(_edition[editionHash].validator).validate{value: msg.value}(to, editionHash, bytes(''));
         
         uint256 tokenId = _mintToken(to);
-        NFTDescriptor memory descriptor = _parent[distHash];
+        NFTDescriptor memory descriptor = _edition[editionHash].descriptor;
         _tokenURI[tokenId] = _fetchURIFromParent(descriptor);
-        _distHash[tokenId] = distHash;
+        _editionHash[tokenId] = editionHash;
         
         return tokenId;
     }
     
-    function revoke(uint256 tokenId) external virtual onlyCreator(parentOf(tokenId)) {
-        require(isPermittedCreator(tokenId, _REVOKE), 'Distributor: Non-revokable');
+    function revoke(uint256 tokenId) external virtual onlyCreator(_edition[_editionHash[tokenId]].descriptor) {
+        require(isPermitted(tokenId, _REVOKE), 'Distributor: Non-revokable');
         delete _tokenURI[tokenId];
-        delete _distHash[tokenId];
+        delete _editionHash[tokenId];
         _burn(tokenId);
     }
 
@@ -125,17 +115,17 @@ contract Distributor is ERC721Enumerable, IDistributor {
             'ERC721: caller is not token owner nor approved'
         );
         delete _tokenURI[tokenId];
-        delete _distHash[tokenId];
+        delete _editionHash[tokenId];
         _burn(tokenId);
     }
 
     function update(uint256 tokenId) external virtual returns (string memory) {
-        require(isPermittedCollector(tokenId, _UPDATE), 'Distributor: Non-updatable');
+        require(isPermitted(tokenId, _UPDATE), 'Distributor: Non-updatable');
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
             'ERC721: caller is not token owner nor approved'
         );
-        _tokenURI[tokenId] = _fetchURIFromParent(parentOf(tokenId));
+        _tokenURI[tokenId] = _fetchURIFromParent(_edition[_editionHash[tokenId]].descriptor);
         return _tokenURI[tokenId];
     }
 
@@ -156,7 +146,7 @@ contract Distributor is ERC721Enumerable, IDistributor {
     ) internal virtual override {
         if (address(0) != from && address(0) != to) {
             // disable transfer if the token is not transferable. It does not apply to mint/burn action
-            require(isPermittedCollector(tokenId, _TRANSFER), 'Distributor: Non-transferable');
+            require(isPermitted(tokenId, _TRANSFER), 'Distributor: Non-transferable');
         }
         super._beforeTokenTransfer(from, to, tokenId);
     }
@@ -182,8 +172,7 @@ contract Distributor is ERC721Enumerable, IDistributor {
                 abi.encode(
                     edition.descriptor.contractAddress,
                     edition.descriptor.tokenId,
-                    edition.parentActions,
-                    edition.childActions,
+                    edition.actions,
                     edition.validator
                 )
             );
@@ -197,28 +186,16 @@ contract Distributor is ERC721Enumerable, IDistributor {
         return _tokenURI[tokenId];
     }
 
-    function isPermittedCollector(uint256 tokenId, bytes4 func) view public returns (bool) {
-        return _childActions[_distHash[tokenId]][func];
+    function isPermitted(uint256 tokenId, uint96 action) view public returns (bool) {
+        return _edition[_editionHash[tokenId]].actions & action == action;
     }
 
-    function isPermittedCreator(uint256 tokenId, bytes4 func) view public returns (bool) {
-        return _childActions[_distHash[tokenId]][func];
-    }
-
-    function parentOf(uint256 tokenId) public view virtual returns (NFTDescriptor memory) {
-        return _parent[_distHash[tokenId]];
-    }
-
-    function parentOf(bytes32 distHash) public view virtual returns (NFTDescriptor memory) {
-        return _parent[distHash];
-    }
-
-    function getValidationCondition(uint256 tokenId) external view virtual returns (address) {
-        return _validator[_distHash[tokenId]];
+    function getEdition(bytes32 editionHash) external view virtual override returns (Edition memory) {
+        return _edition[editionHash];
     }
     
-    function getDistHashes(NFTDescriptor memory descriptor) external view virtual returns (bytes32[] memory) {
-        return _distHashes[descriptor.contractAddress][descriptor.tokenId];
+    function getEditionHashes(NFTDescriptor memory descriptor) external view virtual returns (bytes32[] memory) {
+        return _editionHashes[descriptor.contractAddress][descriptor.tokenId];
     }
 
 }

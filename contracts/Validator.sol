@@ -18,25 +18,24 @@ interface IERC20 {
 }
 
 /**
- * @notice This contract is an implementation of the IValidator interface. It is used to enable mintable 
- * and extending a token with a fee charged. The primary token holder will need to setup rules for collector 
- * to follow before a copy token is minted. 
- * 
+ * @notice This contract is an implementation of the IValidator interface. It is used to enable minting 
+ * of a child token with a fee charged. The parent token holder will need to setup rules for collectors
+ * to follow before a child token is minted.
  */
 contract Validator is IValidator {
 
     /**
-    * @dev the fee to be paid before minting / extending a copy token
+    * @dev the fee to be paid before minting / extending a child token
     * 
     * @param feeToken The contract address of the fee token, i.e. USDT token contract address
-    * @param mintAmount The token amount that is required for minting a copy token
-    * @param duration The time duration that should add to the NFT token after mint
+    * @param mintAmount The token amount that is required for minting a child token
+    * @param limit The maximum number of tokens that can be minted
+    * @param start The starting time of the mint
+    * @param time The duration of the mint
     */
     struct ValidationInfo {
         address feeToken;
-        uint64 duration;
         uint256 mintAmount;
-        address requiredERC721Token;
         uint256 limit;
         uint64  start;
         uint64  time;
@@ -44,7 +43,7 @@ contract Validator is IValidator {
 
 
     event SetRules(
-        bytes32 distHash,
+        bytes32 editionHash,
         ValidationInfo validationInfo
     );
     
@@ -54,42 +53,37 @@ contract Validator is IValidator {
     constructor () {}
 
     /// @inheritdoc IValidator
-    function setRules(bytes32 distHash, bytes calldata initData) external override {
+    function setRules(bytes32 editionHash, bytes calldata initData) external override {
         (ValidationInfo memory valInfo) = abi.decode(initData, (ValidationInfo));
 
         // require(valInfo.start > uint64(block.timestamp), "Validator: Invalid Start Time");
-        _validationInfo[distHash] = valInfo;
-        emit SetRules(distHash, valInfo);
+        _validationInfo[editionHash] = valInfo;
+        emit SetRules(editionHash, valInfo);
     }
     
     /// @inheritdoc IValidator
-    function validate(address to, bytes32 distHash, bytes32 task, bytes calldata fullfilmentData) external payable override {
-        _validateMint(to, distHash);
-        ++_count[distHash];
+    function validate(address to, bytes32 editionHash, bytes calldata fullfilmentData) external payable override {
+        _validateMint(to, editionHash);
+        ++_count[editionHash];
     }
     
     // no reentrant**
     function _validateMint(
         address to,
-        bytes32 distHash
+        bytes32 editionHash
     ) internal {
-        ValidationInfo memory valInfo = _validationInfo[distHash];
+        ValidationInfo memory valInfo = _validationInfo[editionHash];
         // check start time
         require(valInfo.start < uint64(block.timestamp), "Validator: Minting Period Not Started");
 
-        // check deadline (timestamp - start to prevent overflow)
+        // check deadline
         require(valInfo.time > uint64(block.timestamp) - valInfo.start, "Validator: Minting Period Ended");
 
         // check limit
-        require(valInfo.limit > _count[distHash], "Validator: Minting Limit Reached");
+        require(valInfo.limit > _count[editionHash], "Validator: Minting Limit Reached");
 
-        // check token binding
-        if (valInfo.requiredERC721Token != address(0)) {
-            require(IERC721(valInfo.requiredERC721Token).balanceOf(to) > 0, "Validator: Required ERC721 Token has Zero Balance");
-        }
-        
-        
-        IDistributor.NFTDescriptor memory descriptor = IDistributor(msg.sender).parentOf(distHash);
+        // collect fees
+        IDistributor.NFTDescriptor memory descriptor = IDistributor(msg.sender).getEdition(editionHash).descriptor;
         address primaryHolder = IERC721(descriptor.contractAddress).ownerOf(descriptor.tokenId);
 
         // address(0) is the native token
@@ -106,21 +100,21 @@ contract Validator is IValidator {
     }
 
     /**
-    * @dev This function is called to get the validation rules for a copy token
+    * @dev This function is called to get the validation rules for an edition
     *
-    * @param distHash the hash of the copy token
+    * @param editionHash the hash of the copy token
     * @return validationInfo the validation rules for the copy token
     */
     function getValidationInfo(
-        bytes32 distHash
+        bytes32 editionHash
     ) external view returns (ValidationInfo memory) {
-        return _validationInfo[distHash];
+        return _validationInfo[editionHash];
     }
 
     function getMintCount(
-        bytes32 distHash
+        bytes32 editionHash
     ) external view returns (uint256) {
-        return _count[distHash];
+        return _count[editionHash];
     }
 
 }

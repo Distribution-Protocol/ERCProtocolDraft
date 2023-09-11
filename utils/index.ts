@@ -2,7 +2,7 @@ import { BytesLike, ethers } from 'ethers';
 import { BigNumberish } from 'ethers';
 
 // export type MintTuple = [string, BigNumberish, string, boolean, boolean, boolean, boolean];
-export type CopyValidationTuple = [string, BigNumberish, BigNumberish, string, BigNumberish, BigNumberish, BigNumberish];
+export type CopyValidationTuple = [string, BigNumberish, BigNumberish, BigNumberish, BigNumberish];
 
 export interface NftDescriptor {
   contractAddress: string,
@@ -18,9 +18,7 @@ export interface MintData {
 
 export interface CopyValidationData {
     feeToken: string;
-    duration: BigNumberish;
     mintAmount: BigNumberish;
-    requiredERC721Token: string;
     limit: BigNumberish;
     start: BigNumberish;
     time: BigNumberish;
@@ -28,7 +26,7 @@ export interface CopyValidationData {
 
 export const getEncodedValidationData = (validationInfo: CopyValidationTuple) => {
 return ethers.utils.defaultAbiCoder.encode(
-    ['tuple(address, uint64, uint256, address, uint256, uint64, uint64)'],
+    ['tuple(address, uint256, uint256, uint64, uint64)'],
     [validationInfo]
     );
 };
@@ -36,9 +34,7 @@ return ethers.utils.defaultAbiCoder.encode(
 export const getCopyValidationData = (data: CopyValidationData): CopyValidationTuple => {
     return [
       data.feeToken,
-      data.duration,
       data.mintAmount,
-      data.requiredERC721Token,
       data.limit,
       data.start,
       data.time

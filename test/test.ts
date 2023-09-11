@@ -1,8 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
-import { ACTIONS, CONTENT, ZERO_ADDRESS } from '../utils/constants';
-import { withSnapshot } from '../utils/helper';
+import { CONTENT } from '../utils/constants';
 
 import {
     getCopyValidationData,
@@ -13,7 +12,7 @@ import {
 import { deploy } from '../scripts/deploy';
 import { IContracts } from '../scripts/deploy.type';
 
-withSnapshot('DISTRIBUTOR Contract', () => {
+describe('DISTRIBUTOR Contract', () => {
     
     let owner: SignerWithAddress;
     let addr1: SignerWithAddress;
@@ -30,7 +29,7 @@ withSnapshot('DISTRIBUTOR Contract', () => {
 
     describe('end-to-end tests', async () => {
 
-        it('Creator should be able to set up a Validation Conditions for Collector to mint copies', async ()=> {
+        it('Parent token holder should be able to set up an edition for collectors to mint child tokens', async ()=> {
 
             // mint a token
             await contracts.mock.ERC721.connect(addr1).create(
@@ -48,20 +47,12 @@ withSnapshot('DISTRIBUTOR Contract', () => {
                     contractAddress: contracts.mock.ERC721.address,
                     tokenId: creatorId
                 },
-                parentActions: [
-                    ACTIONS.PARENT.REVOKE
-                ],
-                childActions: [
-                    ACTIONS.CHILD.TRANSFER,
-                    ACTIONS.CHILD.UPDATE
-                ]
+                actions: 1 + 2 + 4
               };
             
             let valInfo = getCopyValidationData({
                 feeToken: contracts.mock.ERC20.address,
-                duration: 60 * 60 * 24 * 30,
                 mintAmount: 10000000000,
-                requiredERC721Token: ZERO_ADDRESS,
                 limit: 3,
                 start: getNow()-1000,
                 time: 99999999999999
@@ -85,7 +76,7 @@ withSnapshot('DISTRIBUTOR Contract', () => {
             await contracts.mock.ERC20.connect(addr2).approve(contracts.validator.address, 10000000000);
             
             // get the copyHash
-            let copyHash = (await contracts.distributor.getDistHashes({
+            let copyHash = (await contracts.distributor.getEditionHashes({
                 contractAddress: contracts.mock.ERC721.address,
                 tokenId: creatorId
             }))[0];
@@ -103,6 +94,16 @@ withSnapshot('DISTRIBUTOR Contract', () => {
             
             // check copy NFT data
             expect(await contracts.distributor.tokenURI(copyId)).to.eq(CONTENT);
+
+            // check update
+            await contracts.distributor.connect(addr2).update(copyId);
+
+            // check transfer
+            await contracts.distributor.connect(addr2).transferFrom(addr2.address, addr1.address, copyId);
+
+            // check revoke
+            await contracts.distributor.connect(addr1).revoke(copyId);
+
         })
 
     })

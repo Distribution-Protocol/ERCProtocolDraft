@@ -195,17 +195,17 @@ a different cost to obtain. Higher-tier followers will be able to invoke more fu
 
 ### Community Management with a Single Parent Token or a Selected Edition of Child Tokens
 
-The default setup enables the parent token to get permission to manage the setup of editions and the corresponding validation rules. A potentially advanced setup could lock the parent token into the distributor contract, and delegate the management role to a particular edition of child tokens.
+The default setup enables a single parent token to set editions and the corresponding validation rules. A potentially advanced setup could lock the parent token into the distributor contract, and delegate the management role to a particular edition of child tokens.
 
 ### The Main Contract that Implements the Distributor Interface for Edition Creation
 
-The main contract ...
+The main contract must implement both the ERC721 and the Distributor Interface. The Distributor Interface provides functions to to setup editions and the corresponding validation rules. Optionally, the main contract may implement additional functions that are guarded by the the actions parameter with uint96 flags in the editions. Such a design removes the dependency of the edition based permission on the implementation of contract functions. However, the design only enables invocation of functions using actions parameter, but it does not specify the party. It is up to the developer to set up additional ownership checks, i.e. an actions flag check ensures the invocation of the "revoke token" function on the child token is permitted by a particular edition,  but it requires additional ownership check to make sure this is a parent token only function.
 
 ### Flexible Implementation of Actions
 
-The actions that can be performed are defined in the edition with a uint96 integer. Each bit in the integer determines whether a particular action/function can be invoked in the contract, with a maximum of 96 actions. The actions can be implemented flexibly depending on the specific use cases. For instance, if the parent token wants to have full control over the child token, the edition can permit the parent token holder to invocate a function that transfers the child token to the parent token holder.
+The actions that can be performed are defined in the edition with a uint96 integer. Each bit in the integer determines whether a particular action/function can be invoked in the contract, with a maximum of 96 actions. The actions can be implemented flexibly depending on the specific use cases. For instance, if the parent token wants to have full control over the child token, the edition, together with the function setup, can permit the parent token holder to invocate a function that transfers the child token to the parent token holder.
 
-Actions can give the child tokens the following characteristics:
+Actions may give the child tokens the following characteristics:
 - non-transferable: An SBT that is bound to a user's wallet address
 - revokable: The creator has control over the minted copies. This is suitable for NFTs that encapsulate follower relationships, or funtions as some kind of revokable permits
 - extendable: NFT is valid over a duration and requires extension. This is suitable for recurring memberships.
@@ -235,7 +235,7 @@ This standard is compatible with [EIP-721](./eip-721.md).
 The reference implementation is given in  `../assets/eip-####/`.
 
 ## Security Considerations
-The current design permits the use of an external validator contract which may not implement secure logic and may potentially be malicious. The distributor contract could whitelist a subset of trusted validators. Moreover, an ERC721 contract may at the same time implement both the distributor and the validator interfaces.
+The current design permits the use of an external validator contract which may not implement secure logic and may potentially be malicious. The distributor contract could whitelist a subset of trusted validators. Moreover, an ERC721 contract may at the same time implement both the distributor and the validator interfaces to remove the dependency on external contracts.
 
 ## Copyright
 Copyright and related rights waived via [CC0 1.0](./LICENSE.md).

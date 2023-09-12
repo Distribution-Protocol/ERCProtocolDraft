@@ -16,7 +16,7 @@ This standard is an extension of [EIP-721](./eip-721.md), which enables any EIP-
 
 Edition is defined as a version of child tokens that encapsulates a descriptor to the parent, the address to a validator that validates rules before minting the child token, and a set of actions that can be invoked upon obtaining the child token.
 
-Each parent token can create multiple editions, each with a different set of rules to obtain the child tokens, and with different levels of privileges attached.
+Each parent token can create multiple editions, each with a different set of rules to obtain the child tokens, and with different levels of privileges attached in the form of permitted actions.
 
 Upon fulfilling the corresponding rules from a specific edition, one can obtain the child token and will be able to use the token within the boundaries set by the parent token holder.
 
@@ -26,14 +26,14 @@ Upon fulfilling the corresponding rules from a specific edition, one can obtain 
 
 ## Motivation
 
-Most community-based relationships can be regarded as a structure with a community owner, and multiple tiers of community members. Each tier has its own cost and benefit of joining. This can apply to the Profile-Follower relationship, Domain-Subdomain relationship, Creation-Collection relationship, Producer-Subscriber relationship, Dao-Member relationship, etc.
+Most community-based relationships can be regarded as a social structure with a community owner, and multiple tiers of community members. Each tier has its own cost and benefit of joining. This can apply to the Profile-Follower relationship, Domain-Subdomain relationship, Creation-Collection relationship, Producer-Subscriber relationship, Dao-Member relationship, etc.
 
 This standard gives the interfaces for implementing such a tiered system. It empowers any ERC721 tokens with the ability to create editions of child tokens that give privileges at a cost.
 
 ## Specification
 The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”, “SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “MAY”, and “OPTIONAL” in this document are to be interpreted as described in RFC 2119.
 
-This standard consists of a Distributor Interface and a Validator Interface. The Distributor interface MUST be implemented by a [EIP-721](./eip-721.md) compliant contract that enables the minting of child tokens. This contract SHOULD enable any EIP-721 compliant parent token to create editions. The editions SHOULD consist of an address to a contract that implements the Validator Interface, which helps to validate the rules to mint the child token. An EIP-721-compliant contract MAY implement both the Distributor Interface and the Validator Interface, or implement only the Distributor Interface and use external contracts that implement the Validator Interface.
+This standard consists of a Distributor Interface and a Validator Interface. The Distributor interface MUST be implemented by a [EIP-721](./eip-721.md) compliant contract that enables the minting of child tokens. This contract SHOULD enable any EIP-721 compliant parent token to create editions. The editions SHOULD consist of an address to a contract that implements the Validator Interface, which helps to validate the rules to mint the child token. It SHOULD also record the contract address and the tokenId of the parent token, and a set of permitted actions in the form of uint96 flags. An EIP-721-compliant contract MAY implement both the Distributor Interface and the Validator Interface, or implement only the Distributor Interface and use external contracts that implement the Validator Interface.
 
 ### The Distributor Interface
 
@@ -199,11 +199,11 @@ The default setup enables a single parent token to set editions and the correspo
 
 ### The Main Contract that Implements the Distributor Interface for Edition Creation
 
-The main contract must implement both the ERC721 and the Distributor Interface. The Distributor Interface provides functions to to setup editions and the corresponding validation rules. Optionally, the main contract may implement additional functions that are guarded by the the actions parameter with uint96 flags in the editions. Such a design removes the dependency of the edition based permission on the implementation of contract functions. However, the design only enables invocation of functions using actions parameter, but it does not specify the party. It is up to the developer to set up additional ownership checks, i.e. an actions flag check ensures the invocation of the "revoke token" function on the child token is permitted by a particular edition,  but it requires additional ownership check to make sure this is a parent token only function.
+The main contract must implement both the ERC721 and the Distributor Interface. The Distributor Interface provides functions to to setup editions and the corresponding validation rules. Optionally, the main contract may implement additional functions that are guarded by the the actions parameter, denoted as uint96 flags in the editions. Such a design removes the dependency of the edition based permission control on the implementation of contract functions. However, the design only enables invocation of functions using actions parameter, but it does not specify the party. It is up to the developer to set up additional ownership checks, i.e. the actions flag ensures the invocation of the "revoke token" function on the child token is permitted by a particular edition,  but it requires additional ownership check to make sure this is a parent token only function.
 
 ### Flexible Implementation of Actions
 
-The actions that can be performed are defined in the edition with a uint96 integer. Each bit in the integer determines whether a particular action/function can be invoked in the contract, with a maximum of 96 actions. The actions can be implemented flexibly depending on the specific use cases. For instance, if the parent token wants to have full control over the child token, the edition, together with the function setup, can permit the parent token holder to invocate a function that transfers the child token to the parent token holder.
+The actions that can be performed are defined in the edition as a uint96 integer. Each bit in the integer determines whether a particular function can be invoked in the contract, with a maximum of 96 functions. The actions can be implemented flexibly depending on the specific use cases. For instance, if the parent token wants to have full control over the child token, the edition, together with the function setup, can permit the parent token holder to invocate a function that transfers the child token to the parent token holder.
 
 Actions may give the child tokens the following characteristics:
 - non-transferable: An SBT that is bound to a user's wallet address
@@ -213,7 +213,7 @@ Actions may give the child tokens the following characteristics:
 
 ### External or Internal Implementation of the Validator Interface 
 
-The Validator Interface can be implemented externally as an independent contract, or internally as part of the contract that issues the child token. The former approach is more composable, i.e., a set of common implementations could be shared by a group of projects. The latter one is less composable, but more secure, as it does not depend on third-party code. 
+The Validator Interface can be implemented externally as an independent contract, or internally as part of the contract that issues the child token. The former approach is more composable, i.e., common validation contracts that provides basic rule checking functions, such as payment check, mint limit check, whitelist check, could be shared by a group of projects. The latter one is less composable, but more secure, as it does not depend on third-party code. 
 
 ### Flexible Implementation of Validation Rules
 

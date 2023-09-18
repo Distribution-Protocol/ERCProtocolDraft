@@ -26,7 +26,7 @@ Upon fulfilling the corresponding rules from a specific edition, one can obtain 
 
 ## Motivation
 
-Most community-based relationships can be regarded as a social structure with a community owner, and multiple tiers of community members. Each tier has its own cost and benefit of joining. This can apply to the Profile-Follower relationship, Domain-Subdomain relationship, Creation-Collection relationship, Producer-Subscriber relationship, Dao-Member relationship, etc.
+Most community-based relationships can be regarded as a social structure with a community owner, and multiple tiers of community members. Each tier has its own cost and benefit of joining. This can apply to the Profile-Follower relationship, Creation-Collection relationship, Producer-Subscriber relationship, Dao-Member relationship, etc.
 
 This standard gives the interfaces for implementing such a tiered system. It empowers any ERC721 tokens with the ability to create editions of child tokens that give privileges at a cost.
 
@@ -188,8 +188,6 @@ People with the following use cases can consider applying this standard:
 - Creators of any unique Art/Music NFTs can use this standard to sell copies to audiences. With this standard, they can retain some control over the copies.
 - Artists can use this standard to sell time-limited copies of their artwork to other artists with a copyright statement that enables the production of derivative work
 - Universities can create Graduation Certificates as NFTs and use this standard to mint a batch of non-transferable issues to their students. The Univerity retains the right to revoke any issued certificates, through action.
-- Web3 Domain Name holder can use this protocol to create different tiers of followers, each tier has
-a different cost to obtain. Higher-tier followers will be able to invoke more functions.
 
 ## Rationale
 

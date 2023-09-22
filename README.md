@@ -211,7 +211,7 @@ Actions may give the child tokens the following characteristics:
 
 ### External or Internal Implementation of the Validator Interface 
 
-The Validator Interface can be implemented externally as an independent contract, or internally as part of the contract that issues the child token. The former approach is more composable, i.e., common validation contracts that provides basic rule checking functions, such as payment check, mint limit check, whitelist check, could be shared by a group of projects. The latter one is less composable, but more secure, as it does not depend on third-party code. 
+The Validator Interface can be implemented externally as an independent contract, or internally as part of the contract that issues the child token. The former approach is more composable, i.e., common validation contracts that provides basic rule checking functions, such as payment check, mint limit check, whitelist check, could be separated into multiple different contracts. The latter one is less composable, but more secure, as it does not depend on third-party code. 
 
 ### Flexible Implementation of Validation Rules
 

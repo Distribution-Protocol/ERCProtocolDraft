@@ -50,12 +50,23 @@ contract Validator is IValidator {
     mapping(bytes32 => ValidationInfo) private _validationInfo;
     mapping(bytes32 => uint256) private _count;
 
-    constructor () {}
+    IDistributor private _distributor;
+
+    constructor (
+        IDistributor distributor
+    ) {
+        _distributor = distributor;
+    }
+
+    modifier onlyDistributor {
+        require(msg.sender == address(_distributor), "Validator: Invalid Sender");
+        _;
+    }
 
     /// @inheritdoc IValidator
-    function setRules(bytes32 editionHash, bytes calldata initData) external override {
+    function setRules(bytes32 editionHash, bytes calldata initData) external override onlyDistributor {
         (ValidationInfo memory valInfo) = abi.decode(initData, (ValidationInfo));
-
+        
         // require(valInfo.start > uint64(block.timestamp), "Validator: Invalid Start Time");
         _validationInfo[editionHash] = valInfo;
         emit SetRules(editionHash, valInfo);

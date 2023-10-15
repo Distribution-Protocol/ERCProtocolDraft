@@ -1,7 +1,7 @@
 ---
 eip: <to be assigned>
-title: Multi-Tier Dependant NFTs
-description: A specification on the distribution of multiple editions of child NFTs with abitrary rules and privileges.
+title: Multi-edition NFT Distributions
+description: A specification on the distribution of multiple editions of child NFTs with different rules and privileges.
 author: Henry Yeung (@henrywfyeung)<henry@didhub.com>, Xiaoba <xiaoba@didhub.com>
 discussions-to: <URL>
 status: Draft

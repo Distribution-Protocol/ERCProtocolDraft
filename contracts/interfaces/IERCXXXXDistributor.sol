@@ -6,7 +6,7 @@ pragma solidity >=0.8.0 <0.9.0;
  * @notice The Distributor interface dictates how the holder of any ERC721 compliant tokens (parent token) 
  * can create editions that collectors can conditionally mint child tokens from. Parent token holder can 
  * use the setEdition to specify the condition for minting an edition of the parent token. An edition is 
- * defined by a Nft descriptor to the parent token, the address of the validator contract that specifies
+ * defined by the contractAddress and tokenId to the parent token, the address of the validator contract that specifies
  *  the rules to obtain the child token, the actions that is allowed after obtaining the token.
  *   
  * A Collector can mint a child token of an Edition given that the rules specified by the Validator are 
@@ -40,11 +40,12 @@ interface IDistributor {
      * @dev The parent token holder can set an edition that enables others
      * to mint child tokens given that they fulfil the given rules
      *
-     * @param tokenContract the token contract of the NFT descriptor
-     * @param tokenId the token id of the NFT descriptor
+     * @param tokenContract the token contract of the Parent token
+     * @param tokenId the token id of the Parent token
      * @param validator the address of the validator contract
      * @param actions the functions in the descriptor contract that will be permitted.
-     * @param initData the data to be input into the validator contract for seting up the rules
+     * @param initData the data to be input into the validator contract for seting up the rules, 
+     * it can also be used to encode more parameters for the edition
      * 
      * @return editionHash Returns the hash of the edition conifiguration 
      */

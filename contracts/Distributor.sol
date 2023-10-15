@@ -70,13 +70,13 @@ contract Distributor is ERC721Enumerable, IDistributor {
         
         _storeEdition(edition, editionHash);
         _states[editionHash] = true; // enable minting
-        
+
         IValidator(edition.validator).setRules(editionHash, initData);
         
         emit SetEdition(editionHash, tokenContract, tokenId, validator, actions);
         return editionHash;
     }
-
+    
     function _storeEdition(
         Edition memory edition,
         bytes32 editionHash

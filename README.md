@@ -40,13 +40,12 @@ This standard consists of a Distributor Interface and a Validator Interface. The
 ```
 pragma solidity >=0.8.0 <0.9.0;
 
-
 /**
  * @notice The Distributor interface dictates how the holder of any ERC721 compliant tokens (parent token) 
- * can create editions that collectors can conditionally mint child tokens from. Parent token holders can 
+ * can create editions that collectors can conditionally mint child tokens from. Parent token holder can 
  * use the setEdition to specify the condition for minting an edition of the parent token. An edition is 
- * defined by a Nft descriptor to the parent token, the address of the validator contract that specifies
- *  the rules to obtain the child token, the actions that are allowed after obtaining the token.
+ * defined by the contractAddress and tokenId to the parent token, the address of the validator contract that specifies
+ *  the rules to obtain the child token, the actions that is allowed after obtaining the token.
  *   
  * A Collector can mint a child token of an Edition given that the rules specified by the Validator are 
  * fulfilled.
@@ -57,55 +56,42 @@ pragma solidity >=0.8.0 <0.9.0;
 interface IDistributor {
 
     /**
-     * @dev Emitted when a edition is created
+     * @dev Emitted when a nedition is created
      * 
      * @param editionHash The hash of the edition configuration
-     * @param edition The edition that the editionHash is generated from
-     * @param initData The data bytes for initializing the validator.
+     * @param tokenContract The token contract of the NFT descriptor
+     * @param tokenId The token id of the NFT descriptor
+     * @param validator The address of the validator contract
+     * @param actions The functions in the descriptor contract that will be permitted.
      */
-    event SetEdition(bytes32 editionHash, Edition edition, bytes initData);
+    event SetEdition(bytes32 editionHash, address tokenContract, uint256 tokenId, address validator, uint96 actions);
     
     /**
      * @dev Emitted when an edition is paused
      * 
      * @param editionHash The hash of the edition configuration
+     * @param isPaused The state of the edition
      */
-    event PauseEdition(bytes32 editionHash);
-
-
-    /**
-     * The NFT Descritpor of the parent token
-     */
-    struct NFTDescriptor {
-        address contractAddress;
-        uint256 tokenId;
-    }
-    
-    /**
-     * @dev Edition struct holds the parameters that describe an edition
-     *
-     * @param NFTDescriptor The token descriptor of the parent token
-     * @param validator The address of the validator contract
-     * @param actions The functions in the descriptor contract that will be permitted.
-     * It is a binary mask that corresponds to 96 potential functions
-     */
-    struct Edition {
-        NFTDescriptor descriptor;
-        address validator;
-        uint96 actions;
-    }
+    event PauseEdition(bytes32 editionHash, bool isPaused);
 
     /**
      * @dev The parent token holder can set an edition that enables others
-     * to mint child tokens given that they fulfill the given rules
+     * to mint child tokens given that they fulfil the given rules
      *
-     * @param edition the basic parameters of the child token to be minted
-     * @param initData the data to be input into the validator contract for setting up the rules
+     * @param tokenContract the token contract of the Parent token
+     * @param tokenId the token id of the Parent token
+     * @param validator the address of the validator contract
+     * @param actions the functions in the descriptor contract that will be permitted.
+     * @param initData the data to be input into the validator contract for seting up the rules
+     * it can also be used to encode more parameters for the edition
      * 
-     * @return editionHash Returns the hash of the edition configuration 
+     * @return editionHash Returns the hash of the edition conifiguration 
      */
     function setEdition(
-        Edition memory edition,
+        address tokenContract,
+        uint256 tokenId,
+        address validator,
+        uint96  actions,
         bytes calldata initData
     ) external returns (bytes32 editionHash);
     
@@ -113,21 +99,12 @@ interface IDistributor {
      * @dev The parent token holder can pause the edition
      *
      * @param editionHash the hash of the edition
+     * @param isPaused the state of the edition
      */ 
     function pauseEdition(
-        bytes32 editionHash
+        bytes32 editionHash,
+        bool isPaused
     ) external;
-
-    /**
-     * @dev Find the parent token of an edition
-     *
-     * @param editionHash the hash of the edition
-     *
-     * @return edition the edition data
-     */
-    function getEdition(
-        bytes32 editionHash
-    ) external view returns (Edition memory edition);
 
 }
 ```
@@ -138,8 +115,8 @@ interface IDistributor {
 pragma solidity >=0.8.0 <0.9.0;
 
 /**
- * @notice This is the validator interface. It specifies the rules that need to be fulfilled and enforces 
- * the fulfillment of these rules. The parent token holder is required to first register these rules onto a particular
+ * @notice This is the validator interface. It specifies the rules that needs to be fulfilled, and enforce the
+ * fulfillment of these rules. The parent token holder is required to first register these rules onto a particular
  * edition, identified by the hash of the edition configuration (editionHash). When a collector wants to mint from
  * the edition, the collector will need to pass the validation by successfully calling the validate function.  
  * 
@@ -160,17 +137,19 @@ interface IValidator {
         bytes32 editionHash, 
         bytes calldata initData
     ) external;
-
+    
     /**
      * @dev Supply the data that will be used to validate the fulfilment of the rules setup by the parent token holder.
      *
      * @param initiator the party who initiate vadiation
      * @param editionHash the hash of the edition configuration
+     * @param conditionType the type of condition to validation
      * @param fullfilmentData the addtion data that is required for passing the validator rules
      */
     function validate(
         address initiator, 
         bytes32 editionHash,
+        uint256 conditionType,
         bytes calldata fullfilmentData
     ) external payable;
 
@@ -193,11 +172,11 @@ People with the following use cases can consider applying this standard:
 
 ### Community Management with a Single Parent Token or a Selected Edition of Child Tokens
 
-The default setup enables a single parent token to set editions and the corresponding validation rules. A potentially advanced setup could lock the parent token into the distributor contract, and delegate the management role to a particular edition of child tokens.
+The default setup enables a single parent token to set editions and the corresponding validation rules. A potentially advanced setup could delegate the management role to a particular edition of child tokens.
 
 ### The Main Contract that Implements the Distributor Interface for Edition Creation
 
-The main contract must implement both the ERC721 and the Distributor Interface. The Distributor Interface provides functions to to setup editions and the corresponding validation rules. Optionally, the main contract may implement additional functions that are guarded by the the actions parameter, denoted as uint96 flags in the editions. Such a design removes the dependency of the edition based permission control on the implementation of contract functions. However, the design only enables invocation of functions using actions parameter, but it does not specify the party. It is up to the developer to set up additional ownership checks, i.e. the actions flag ensures the invocation of the "revoke token" function on the child token is permitted by a particular edition,  but it requires additional ownership check to make sure this is a parent token only function.
+The main contract must implement both the ERC721 and the Distributor Interface. The Distributor Interface provides functions to to setup editions and the corresponding validation rules. Optionally, the main contract may implement additional functions that are guarded by the the actions parameter, denoted as action bits (uint96) in the editions. Such a design removes the dependency of the edition based permission control on the implementation of contract functions. However, the design only enables invocation of functions using actions parameter, but it does not specify the party. It is up to the developer to set up additional ownership checks, i.e. the action bits ensure the invocation of the "revoke token" function on the child token is permitted, but it requires additional ownership check in the contract to make sure this is a parent token only function.
 
 ### Flexible Implementation of Actions
 
@@ -208,10 +187,11 @@ Actions may give the child tokens the following characteristics:
 - revokable: The creator has control over the minted copies. This is suitable for NFTs that encapsulate follower relationships, or funtions as some kind of revokable permits
 - extendable: NFT is valid over a duration and requires extension. This is suitable for recurring memberships.
 - updateable: Allows the child token holder to update the tokenUri when the parent token is updated
+- vote: Child token holder can vote if the vote action bit is set
 
 ### External or Internal Implementation of the Validator Interface 
 
-The Validator Interface can be implemented externally as an independent contract, or internally as part of the contract that issues the child token. The former approach is more composable, i.e., common validation contracts that provides basic rule checking functions, such as payment check, mint limit check, whitelist check, could be separated into multiple different contracts. The latter one is less composable, but more secure, as it does not depend on third-party code. 
+The Validator Interface can be implemented externally as an independent contract, or internally as part of the contract that issues the child token. The former approach is more upgrade-friendly, i.e., validation contracts can be easily swapped to a higher version, while still maintaining compatibility to past versions. More it permits multiple different validators to coexists at the same time. The latter one is less composable, but more secure, as it does not depend on third-party code. This is prefered if the validated rules are unlikely to change in the future.
 
 ### Flexible Implementation of Validation Rules
 

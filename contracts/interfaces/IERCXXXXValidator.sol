@@ -24,13 +24,13 @@ interface IValidator {
         bytes32 editionHash, 
         bytes calldata initData
     ) external;
-
+    
     /**
      * @dev Supply the data that will be used to validate the fulfilment of the rules setup by the parent token holder.
      *
      * @param initiator the party who initiate vadiation
      * @param editionHash the hash of the edition configuration
-     * @param conditionType the type of conditions to validation
+     * @param conditionType the type of condition to validation
      * @param fullfilmentData the addtion data that is required for passing the validator rules
      */
     function validate(

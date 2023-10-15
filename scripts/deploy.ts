@@ -23,7 +23,7 @@ export async function deploy(isMain=false): Promise<IContracts> {
   let distributorContract = await new Distributor__factory(owner).deploy("Collection", "COL");
 
   // deploy validator
-  let validatorContract = await new Validator__factory(owner).deploy();
+  let validatorContract = await new Validator__factory(owner).deploy(distributorContract.address);
 
   // deploy test contracts
   let mockFT = await new MockERC20__factory(owner).deploy("MOCK_USDT", "MUSDT");

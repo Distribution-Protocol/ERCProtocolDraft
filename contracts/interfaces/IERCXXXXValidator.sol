@@ -30,11 +30,13 @@ interface IValidator {
      *
      * @param initiator the party who initiate vadiation
      * @param editionHash the hash of the edition configuration
+     * @param conditionType the type of conditions to validation
      * @param fullfilmentData the addtion data that is required for passing the validator rules
      */
     function validate(
         address initiator, 
         bytes32 editionHash,
+        uint256 conditionType,
         bytes calldata fullfilmentData
     ) external payable;
 

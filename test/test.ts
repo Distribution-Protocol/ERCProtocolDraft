@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
-import { CONTENT } from '../utils/constants';
+import { ACTION, CONTENT } from '../utils/constants';
 
 import {
     getCopyValidationData,
@@ -41,15 +41,6 @@ describe('DISTRIBUTOR Contract', () => {
             let balance = (await contracts.mock.ERC721.balanceOf(addr1.address)).toNumber();
             let creatorId = (await contracts.mock.ERC721.tokenOfOwnerByIndex(addr1.address, balance-1)).toString();
 
-            let mintInfo = {
-                validator: contracts.validator.address,
-                descriptor: {
-                    contractAddress: contracts.mock.ERC721.address,
-                    tokenId: creatorId
-                },
-                actions: 1 + 2 + 4
-              };
-            
             let valInfo = getCopyValidationData({
                 feeToken: contracts.mock.ERC20.address,
                 mintAmount: 10000000000,
@@ -59,7 +50,10 @@ describe('DISTRIBUTOR Contract', () => {
             });
 
             await expect(contracts.distributor.connect(addr1).setEdition(
-                mintInfo,
+                contracts.mock.ERC721.address,
+                creatorId,
+                contracts.validator.address,
+                ACTION.TRANSFER + ACTION.UPDATE + ACTION.REVOKE, // actions
                 getEncodedValidationData(valInfo) // data
             )).to.not.be.reverted;
             
@@ -76,10 +70,10 @@ describe('DISTRIBUTOR Contract', () => {
             await contracts.mock.ERC20.connect(addr2).approve(contracts.validator.address, 10000000000);
             
             // get the copyHash
-            let copyHash = (await contracts.distributor.getEditionHashes({
-                contractAddress: contracts.mock.ERC721.address,
-                tokenId: creatorId
-            }))[0];
+            let copyHash = (await contracts.distributor.getEditionHashes(
+                contracts.mock.ERC721.address,
+                creatorId
+            ))[0];
 
             // get a copy
             await contracts.distributor.connect(addr2).mint(addr2.address, copyHash);

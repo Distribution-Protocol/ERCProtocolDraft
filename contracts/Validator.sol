@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import './interfaces/IERCXXXXDistributor.sol';
+import './Distributor.sol';
 import './interfaces/IERCXXXXValidator.sol';
 
-interface IERC721 {
-    function ownerOf(uint256 tokenId) external view returns (address owner);
-    function balanceOf(address owner) external view returns (uint256);
-}
+// interface IERC721 {
+//     function ownerOf(uint256 tokenId) external view returns (address owner);
+//     function balanceOf(address owner) external view returns (uint256);
+// }
 
 interface IERC20 {
     function transferFrom(
@@ -41,7 +41,6 @@ contract Validator is IValidator {
         uint64  time;
     }
 
-
     event SetRules(
         bytes32 editionHash,
         ValidationInfo validationInfo
@@ -73,7 +72,7 @@ contract Validator is IValidator {
     }
     
     /// @inheritdoc IValidator
-    function validate(address to, bytes32 editionHash, bytes calldata fullfilmentData) external payable override {
+    function validate(address to, bytes32 editionHash, uint256 conditionType, bytes calldata fullfilmentData) external payable override {
         _validateMint(to, editionHash);
         ++_count[editionHash];
     }
@@ -94,8 +93,9 @@ contract Validator is IValidator {
         require(valInfo.limit > _count[editionHash], "Validator: Minting Limit Reached");
 
         // collect fees
-        IDistributor.NFTDescriptor memory descriptor = IDistributor(msg.sender).getEdition(editionHash).descriptor;
-        address primaryHolder = IERC721(descriptor.contractAddress).ownerOf(descriptor.tokenId);
+        Distributor.Edition memory edition = Distributor(msg.sender).getEdition(editionHash);
+        
+        address primaryHolder = IERC721(edition.tokenContract).ownerOf(edition.tokenId);
 
         // address(0) is the native token
         if (valInfo.feeToken == address(0)) {

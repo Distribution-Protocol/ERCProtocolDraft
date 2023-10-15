@@ -14,11 +14,11 @@ import 'hardhat/console.sol';
 contract Distributor is ERC721Enumerable, IDistributor {
     using Strings for uint256;
 
-    // the state of the edition
-    enum State { 
-        NIL,     // edition not exists
-        PAUSED,  // edition paused
-        ACTIVE   // edition active
+    struct Edition {
+        address tokenContract;
+        uint256 tokenId;
+        address validator;
+        uint96  actions;
     }
 
     uint96 private constant _TRANSFER = 1<<0;  // child action
@@ -40,16 +40,16 @@ contract Distributor is ERC721Enumerable, IDistributor {
     // mapping(bytes32 => uint96) private _actions;
     
     // editions state
-    mapping(bytes32 => State) private _states;
+    mapping(bytes32 => bool) private _states;
 
     constructor (
         string memory name_, 
         string memory symbol_
     ) ERC721(name_, symbol_) {}
     
-    modifier onlyCreator(NFTDescriptor memory descriptor) {
+    modifier onlyCreator(address tokenContract, uint256 tokenId) {
         require(
-            _isApprovedOrCreator(_msgSender(), descriptor),
+            _isApprovedOrCreator(_msgSender(), tokenContract, tokenId),
             'Distributor: caller is not creator nor approved'
         );
         _;
@@ -57,19 +57,23 @@ contract Distributor is ERC721Enumerable, IDistributor {
 
     /// @inheritdoc IDistributor
     function setEdition(
-        Edition memory edition,
+        address tokenContract,
+        uint256 tokenId,
+        address validator,
+        uint96  actions,
         bytes calldata initData
-    ) external virtual override onlyCreator(edition.descriptor) returns (bytes32) {
-        bytes32 editionHash = _getHash(edition);
+    ) external override onlyCreator(tokenContract, tokenId) returns (bytes32) {
+
+        Edition memory edition = Edition(tokenContract, tokenId, validator, actions);
+
+        bytes32 editionHash = _getEditionHash(tokenContract, tokenId);
         
-        // editions are only initiated if not already exists. For editions in paused state, the edition will change to active
-        if ( _states[editionHash] == State.NIL ) {
-            _storeEdition(edition, editionHash);
-            IValidator(edition.validator).setRules(editionHash, initData);
-        }
-        _states[editionHash] = State.ACTIVE;
+        _storeEdition(edition, editionHash);
+        _states[editionHash] = true; // enable minting
         
-        emit SetEdition(editionHash, edition, initData);
+        IValidator(edition.validator).setRules(editionHash, initData);
+        
+        emit SetEdition(editionHash, tokenContract, tokenId, validator, actions);
         return editionHash;
     }
 
@@ -77,39 +81,39 @@ contract Distributor is ERC721Enumerable, IDistributor {
         Edition memory edition,
         bytes32 editionHash
     ) internal {
-        _editionHashes[edition.descriptor.contractAddress][edition.descriptor.tokenId].push(editionHash);
+        _editionHashes[edition.tokenContract][edition.tokenId].push(editionHash);
         _edition[editionHash] = edition;
     }
 
     /// @inheritdoc IDistributor
     function pauseEdition(
-        bytes32 editionHash
-    ) external virtual override onlyCreator(_edition[editionHash].descriptor) {
-        _states[editionHash] = State.PAUSED; // disable minting
-        emit PauseEdition(editionHash);
+        bytes32 editionHash,
+        bool isPaused
+    ) external override onlyCreator(_edition[editionHash].tokenContract, _edition[editionHash].tokenId) {
+        _states[editionHash] = !isPaused; // disable minting
+        emit PauseEdition(editionHash, isPaused);
     }
     
     // validate condition fulfilment and mint
-    function mint(address to, bytes32 editionHash) external virtual payable returns (uint256) {
-        require(_states[editionHash] == State.ACTIVE, 'Distributor: Minting Disabled');
-        IValidator(_edition[editionHash].validator).validate{value: msg.value}(to, editionHash, bytes(''));
+    function mint(address to, bytes32 editionHash) external payable returns (uint256) {
+        require(_states[editionHash], 'Distributor: Minting Disabled');
+        IValidator(_edition[editionHash].validator).validate{value: msg.value}(to, editionHash, 0, bytes(''));
         
         uint256 tokenId = _mintToken(to);
-        NFTDescriptor memory descriptor = _edition[editionHash].descriptor;
-        _tokenURI[tokenId] = _fetchURIFromParent(descriptor);
+        _tokenURI[tokenId] = _fetchURIFromParent(_edition[editionHash].tokenContract, _edition[editionHash].tokenId);
         _editionHash[tokenId] = editionHash;
         
         return tokenId;
     }
     
-    function revoke(uint256 tokenId) external virtual onlyCreator(_edition[_editionHash[tokenId]].descriptor) {
+    function revoke(uint256 tokenId) external onlyCreator(_edition[_editionHash[tokenId]].tokenContract, _edition[_editionHash[tokenId]].tokenId) {
         require(isPermitted(tokenId, _REVOKE), 'Distributor: Non-revokable');
         delete _tokenURI[tokenId];
         delete _editionHash[tokenId];
         _burn(tokenId);
     }
 
-    function destroy(uint256 tokenId) external virtual {
+    function destroy(uint256 tokenId) external {
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
             'ERC721: caller is not token owner nor approved'
@@ -119,13 +123,13 @@ contract Distributor is ERC721Enumerable, IDistributor {
         _burn(tokenId);
     }
 
-    function update(uint256 tokenId) external virtual returns (string memory) {
+    function update(uint256 tokenId) external returns (string memory) {
         require(isPermitted(tokenId, _UPDATE), 'Distributor: Non-updatable');
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
             'ERC721: caller is not token owner nor approved'
         );
-        _tokenURI[tokenId] = _fetchURIFromParent(_edition[_editionHash[tokenId]].descriptor);
+        _tokenURI[tokenId] = _fetchURIFromParent(_edition[_editionHash[tokenId]].tokenContract, _edition[_editionHash[tokenId]].tokenId);
         return _tokenURI[tokenId];
     }
 
@@ -135,15 +139,15 @@ contract Distributor is ERC721Enumerable, IDistributor {
         return tokenId;
     }
 
-    function _fetchURIFromParent(NFTDescriptor memory descriptor) internal view virtual returns (string memory) {
-        return IERC721Metadata(descriptor.contractAddress).tokenURI(descriptor.tokenId);
+    function _fetchURIFromParent(address tokenContract, uint256 tokenId) internal view returns (string memory) {
+        return IERC721Metadata(tokenContract).tokenURI(tokenId);
     }
 
     function _beforeTokenTransfer(
         address from,
         address to,
         uint256 tokenId
-    ) internal virtual override {
+    ) internal override {
         if (address(0) != from && address(0) != to) {
             // disable transfer if the token is not transferable. It does not apply to mint/burn action
             require(isPermitted(tokenId, _TRANSFER), 'Distributor: Non-transferable');
@@ -151,29 +155,29 @@ contract Distributor is ERC721Enumerable, IDistributor {
         super._beforeTokenTransfer(from, to, tokenId);
     }
 
-    function _isApprovedOrCreator(address spender, NFTDescriptor memory descriptor)
+    function _isApprovedOrCreator(address spender, address tokenContract, uint256 tokenId)
         internal
         view
         virtual
         returns (bool)
     {
-        address owner = IERC721(descriptor.contractAddress).ownerOf(descriptor.tokenId);
+        address owner = IERC721(tokenContract).ownerOf(tokenId);
         return
             owner == spender ||
-            IERC721(descriptor.contractAddress).getApproved(descriptor.tokenId) == spender ||
-            IERC721(descriptor.contractAddress).isApprovedForAll(owner, spender);
+            IERC721(tokenContract).getApproved(tokenId) == spender ||
+            IERC721(tokenContract).isApprovedForAll(owner, spender);
     }
 
-    function _getHash(
-        Edition memory edition
-    ) internal pure returns (bytes32) {
+    function _getEditionHash(
+        address tokenContract,
+        uint256 tokenId
+    ) internal view returns (bytes32) {
         return
             keccak256(
                 abi.encode(
-                    edition.descriptor.contractAddress,
-                    edition.descriptor.tokenId,
-                    edition.actions,
-                    edition.validator
+                    tokenContract,
+                    tokenId,
+                    _editionHashes[tokenContract][tokenId].length
                 )
             );
     }
@@ -181,7 +185,7 @@ contract Distributor is ERC721Enumerable, IDistributor {
     /**
      * @dev See {IERC721Metadata-tokenURI}.
      */
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
         require(_exists(tokenId), 'ERC721Metadata: URI query for nonexistent token');
         return _tokenURI[tokenId];
     }
@@ -189,13 +193,13 @@ contract Distributor is ERC721Enumerable, IDistributor {
     function isPermitted(uint256 tokenId, uint96 action) view public returns (bool) {
         return _edition[_editionHash[tokenId]].actions & action == action;
     }
-
-    function getEdition(bytes32 editionHash) external view virtual override returns (Edition memory) {
+    
+    function getEdition(bytes32 editionHash) external view returns (Edition memory) {
         return _edition[editionHash];
     }
     
-    function getEditionHashes(NFTDescriptor memory descriptor) external view virtual returns (bytes32[] memory) {
-        return _editionHashes[descriptor.contractAddress][descriptor.tokenId];
+    function getEditionHashes(address tokenContract, uint256 tokenId) external view returns (bytes32[] memory) {
+        return _editionHashes[tokenContract][tokenId];
     }
 
 }

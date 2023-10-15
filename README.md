@@ -2,7 +2,7 @@
 eip: <to be assigned>
 title: Multi-Tier Dependant NFTs
 description: A specification on the distribution of multiple editions of child NFTs with abitrary rules and privileges.
-author: Henry Yeung (henrywfyeung@gmail.com), Xiaoba <99x.capital@gmail.com>
+author: Henry Yeung (henrywfyeung@gmail.com), Xiaoba <xiaoba@didhub.com>
 discussions-to: <URL>
 status: Draft
 type: Standards Track

@@ -21,52 +21,38 @@ interface IDistributor {
      * @dev Emitted when a nedition is created
      * 
      * @param editionHash The hash of the edition configuration
-     * @param edition The edition that the editionHash is generated from
-     * @param initData The data bytes for initialising the validator.
+     * @param tokenContract The token contract of the NFT descriptor
+     * @param tokenId The token id of the NFT descriptor
+     * @param validator The address of the validator contract
+     * @param actions The functions in the descriptor contract that will be permitted.
      */
-    event SetEdition(bytes32 editionHash, Edition edition, bytes initData);
+    event SetEdition(bytes32 editionHash, address tokenContract, uint256 tokenId, address validator, uint96 actions);
     
     /**
      * @dev Emitted when an edition is paused
      * 
      * @param editionHash The hash of the edition configuration
+     * @param isPaused The state of the edition
      */
-    event PauseEdition(bytes32 editionHash);
-
-
-    /**
-     * The NFT Descritpor of the parent token
-     */
-    struct NFTDescriptor {
-        address contractAddress;
-        uint256 tokenId;
-    }
-    
-    /**
-     * @dev Edition struct holds the parameters that describes an edition
-     *
-     * @param NFTDescriptor The token descriptor of the parent token
-     * @param validator The address of the validator contract
-     * @param actions The functions in the descriptor contract that will be permitted.
-     * It is a binary mask corresponds to 96 potential functions
-     */
-    struct Edition {
-        NFTDescriptor descriptor;
-        address validator;
-        uint96 actions;
-    }
+    event PauseEdition(bytes32 editionHash, bool isPaused);
 
     /**
      * @dev The parent token holder can set an edition that enables others
      * to mint child tokens given that they fulfil the given rules
      *
-     * @param edition the basic parameters of the child token to be minted
+     * @param tokenContract the token contract of the NFT descriptor
+     * @param tokenId the token id of the NFT descriptor
+     * @param validator the address of the validator contract
+     * @param actions the functions in the descriptor contract that will be permitted.
      * @param initData the data to be input into the validator contract for seting up the rules
      * 
      * @return editionHash Returns the hash of the edition conifiguration 
      */
     function setEdition(
-        Edition memory edition,
+        address tokenContract,
+        uint256 tokenId,
+        address validator,
+        uint96  actions,
         bytes calldata initData
     ) external returns (bytes32 editionHash);
     
@@ -74,20 +60,11 @@ interface IDistributor {
      * @dev The parent token holder can pause the edition
      *
      * @param editionHash the hash of the edition
+     * @param isPaused the state of the edition
      */ 
     function pauseEdition(
-        bytes32 editionHash
+        bytes32 editionHash,
+        bool isPaused
     ) external;
-
-    /**
-     * @dev Find the parent token of an edition
-     *
-     * @param editionHash the hash of the edition
-     *
-     * @return edition the edition data
-     */
-    function getEdition(
-        bytes32 editionHash
-    ) external view returns (Edition memory edition);
 
 }
